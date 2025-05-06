@@ -17,7 +17,7 @@ const SubTaskSchema = z.object({
   taskDescription: z.string().describe('A clear, concise description of the sub-task.'),
   assignedAgent: z.string().describe('The type of virtual agent best suited to handle this sub-task (e.g., "Data Analyst", "Creative Writer", "Fact Checker", "VisualContextAnalyzer").'),
   status: z.enum(['pending', 'processing', 'completed', 'failed']).describe('The current status of the sub-task.'),
-  resultSummary: z.string().optional().describe('A brief summary of the sub-task\'s outcome if completed.'),
+  resultSummary: z.string().optional().nullable().describe('A brief summary of the sub-task\'s outcome if completed. Can be null if not applicable yet.'),
 });
 export type SubTask = z.infer<typeof SubTaskSchema>;
 
@@ -108,13 +108,13 @@ Visual Context Provided: None.
 Instructions:
 1.  **Decomposition**: Analyze the main prompt AND THE IMAGE (if provided). Identify 3 to 5 distinct sub-tasks required to fully address it.
     *   If an image is provided, one sub-task MUST be dedicated to analyzing the image and extracting relevant insights. Assign this to a "VisualContextAnalyzer" agent.
-    *   For each sub-task: Assign a unique ID, write a taskDescription, assign an "assignedAgent" (e.g., "DataExtractionAgent", "SentimentAnalysisAgent", "NewsAnalysisAgent", "VisualContextAnalyzer"), and set status to "pending".
+    *   For each sub-task: Assign a unique ID, write a taskDescription, assign an "assignedAgent" (e.g., "DataExtractionAgent", "SentimentAnalysisAgent", "NewsAnalysisAgent", "VisualContextAnalyzer"), and set status to "pending". The 'resultSummary' should be null or an empty string if the task is pending or processing.
 2.  **Tool Usage (If Applicable)**:
     *   If 'getTopNewsHeadlines' is used, integrate its output.
     *   Document tool usage in 'toolUsages'. Add a 'tool' node in the workflow diagram.
 3.  **Virtual Processing (Simulated)**: For each sub-task:
     *   Change status: "pending" -> "processing" -> "completed".
-    *   Generate a "resultSummary" (1-2 sentences). If it's the image analysis task, the summary should describe what was understood from the image.
+    *   Generate a "resultSummary" (1-2 sentences) ONLY when the task status is "completed". If it's the image analysis task, the summary should describe what was understood from the image. If the task is 'pending' or 'processing', resultSummary should be null or an empty string.
 4.  **Synthesis**: Based on resultSummaries (including image analysis if any) and tool outputs, formulate a "synthesizedAnswer". This answer MUST reflect insights from both text prompt and image context if provided.
 5.  **Workflow Explanation**: Detail prompt breakdown, agent roles, tool contributions, AND HOW THE IMAGE (if provided) influenced the process and final answer.
 6.  **Workflow Diagram Data**:
@@ -134,6 +134,15 @@ Example Sub-Task for Image Analysis:
   "status": "completed",
   "resultSummary": "The image depicts a modern, densely populated city at night with illuminated skyscrapers, suggesting themes of technological advancement and high-density living. Prominent features include a unique spiral tower and extensive transportation networks."
 }
+Example Sub-Task (Pending):
+{
+  "id": "task-data-002",
+  "taskDescription": "Extract key financial data from the latest quarterly report.",
+  "assignedAgent": "DataExtractionAgent",
+  "status": "pending",
+  "resultSummary": null 
+}
+
 
 Begin!
 `,
