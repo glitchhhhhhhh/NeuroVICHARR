@@ -1,28 +1,27 @@
-
+'use client';
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Inter } from 'next/font/google'; // Changed from Geist
 import './globals.css';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, BrainCircuit } from 'lucide-react';
+import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
 import { ModeToggle } from '@/components/mode-toggle';
 import { ThemeProvider } from "@/components/theme-provider";
+import { AnimatePresence, motion } from 'framer-motion';
+import { usePathname } from 'next/navigation';
 
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const inter = Inter({ // Changed from geistSans
+  variable: '--font-sans', // Changed variable name
   subsets: ['latin'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+// Removed geistMono as Inter can be used for mono as well or a specific mono font can be added if needed
 
-export const metadata: Metadata = {
+// Metadata can remain static unless dynamic generation is required
+export const metadataObject: Metadata = {
   title: 'NeuroVichar',
   description: 'Intelligent Prompt Collaboration Platform',
 };
@@ -32,9 +31,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      {/* It's generally better to set metadata in the Head component of individual pages or a specific _app.js/_document.js if needed dynamically */}
+      <head>
+        <title>{String(metadataObject.title)}</title>
+        <meta name="description" content={String(metadataObject.description)} />
+      </head>
+      <body className={`${inter.variable} font-sans antialiased`}> {/* Use font-sans which maps to --font-sans */}
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -81,7 +86,7 @@ export default function RootLayout({
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="Neural Interface">
                       <Link href="/neural-interface">
-                        <BrainCircuit />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-brain-circuit"><path d="M12 5a3 3 0 1 0-5.997.125"/><path d="M12 5a3 3 0 1 1 5.997.125"/><path d="M15 11a3 3 0 1 0-5.997.125"/><path d="M15 11a3 3 0 1 1 5.997.125"/><path d="M9 11a3 3 0 1 0-5.997.125"/><path d="M9 11a3 3 0 1 1 5.997.125"/><path d="M12 17a3 3 0 1 0-5.997.125"/><path d="M12 17a3 3 0 1 1 5.997.125"/><path d="M14 5.5a3 3 0 0 0-2-1"/><path d="M10 5.5a3 3 0 0 1 2-1"/><path d="M17 11.5a3 3 0 0 0-2-1"/><path d="M13 11.5a3 3 0 0 1 2-1"/><path d="M11 11.5a3 3 0 0 0-2-1"/><path d="M7 11.5a3 3 0 0 1 2-1"/><path d="M14 17.5a3 3 0 0 0-2-1"/><path d="M10 17.5a3 3 0 0 1 2-1"/><circle cx="12" cy="12" r="11"/><path d="M17.5 14a3 3 0 0 0-1-2"/><path d="M17.5 10a3 3 0 0 0-1 2"/><path d="M6.5 14a3 3 0 0 1 1-2"/><path d="M6.5 10a3 3 0 0 1 1 2"/><path d="M14 6.5a3 3 0 0 0-2 1"/><path d="M10 6.5a3 3 0 0 1 2 1"/><path d="M14 17.5a3 3 0 0 0-2-1"/><path d="M10 17.5a3 3 0 0 1 2-1"/></svg>
                         <span>Neural Interface</span>
                       </Link>
                     </SidebarMenuButton>
@@ -118,9 +123,18 @@ export default function RootLayout({
               </SidebarFooter>
             </Sidebar>
             <SidebarInset>
-              <div className="p-4 md:p-6 lg:p-8">
-                {children}
-              </div>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={pathname}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="p-4 md:p-6 lg:p-8"
+                >
+                  {children}
+                </motion.div>
+              </AnimatePresence>
             </SidebarInset>
           </SidebarProvider>
           <Toaster />

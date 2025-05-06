@@ -1,7 +1,8 @@
-
+'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Zap, Share2, SearchCode, Globe, BrainCircuit } from "lucide-react";
+import { Brain, Zap, Share2, SearchCode, Globe } from "lucide-react";
 import Link from "next/link";
+import { motion } from 'framer-motion';
 
 const features = [
   {
@@ -21,7 +22,7 @@ const features = [
   {
     title: "Neural Interface",
     description: "Intuitive LLM-powered prompt submission.",
-    icon: <BrainCircuit className="w-8 h-8 text-accent" />,
+    icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-brain-circuit text-accent"><path d="M12 5a3 3 0 1 0-5.997.125"/><path d="M12 5a3 3 0 1 1 5.997.125"/><path d="M15 11a3 3 0 1 0-5.997.125"/><path d="M15 11a3 3 0 1 1 5.997.125"/><path d="M9 11a3 3 0 1 0-5.997.125"/><path d="M9 11a3 3 0 1 1 5.997.125"/><path d="M12 17a3 3 0 1 0-5.997.125"/><path d="M12 17a3 3 0 1 1 5.997.125"/><path d="M14 5.5a3 3 0 0 0-2-1"/><path d="M10 5.5a3 3 0 0 1 2-1"/><path d="M17 11.5a3 3 0 0 0-2-1"/><path d="M13 11.5a3 3 0 0 1 2-1"/><path d="M11 11.5a3 3 0 0 0-2-1"/><path d="M7 11.5a3 3 0 0 1 2-1"/><path d="M14 17.5a3 3 0 0 0-2-1"/><path d="M10 17.5a3 3 0 0 1 2-1"/><circle cx="12" cy="12" r="11"/><path d="M17.5 14a3 3 0 0 0-1-2"/><path d="M17.5 10a3 3 0 0 0-1 2"/><path d="M6.5 14a3 3 0 0 1 1-2"/><path d="M6.5 10a3 3 0 0 1 1 2"/><path d="M14 6.5a3 3 0 0 0-2 1"/><path d="M10 6.5a3 3 0 0 1 2 1"/><path d="M14 17.5a3 3 0 0 0-2-1"/><path d="M10 17.5a3 3 0 0 1 2-1"/></svg>,
     href: "/neural-interface",
     ai: true,
   },
@@ -48,26 +49,63 @@ const features = [
   },
 ];
 
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.1,
+      duration: 0.4,
+      ease: "easeOut",
+    },
+  }),
+  hover: {
+    scale: 1.03,
+    boxShadow: "0px 10px 20px hsla(var(--card-foreground) / 0.1)",
+    borderColor: "hsl(var(--accent))",
+    transition: { duration: 0.2 }
+  }
+};
+
 export default function DashboardPage() {
   return (
     <div className="space-y-8">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground">Welcome to NeuroVichar</h1>
-        <p className="text-lg text-muted-foreground mt-2">
+      <motion.header 
+        className="mb-8"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Welcome to NeuroVichar</h1>
+        <p className="text-lg text-muted-foreground mt-2 sm:text-xl">
           An intelligent platform for collaborative AI-driven insights.
         </p>
-      </header>
+      </motion.header>
 
       <section>
-        <h2 className="text-2xl font-semibold mb-4 text-foreground">Core Features</h2>
+        <h2 className="text-2xl font-semibold mb-6 text-foreground sm:text-3xl">Core Features</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature) => (
-            <Link href={feature.href} key={feature.title} className="group">
-              <Card className="h-full transition-all duration-300 ease-in-out hover:shadow-xl hover:border-accent transform hover:-translate-y-1">
+          {features.map((feature, index) => (
+            <Link href={feature.href} key={feature.title} className="group block">
+              <motion.custom
+                variants={cardVariants}
+                initial="hidden"
+                animate="visible"
+                whileHover="hover"
+                custom={index}
+                className="h-full"
+                 // @ts-ignore  // motion.custom does not recognize Card as a valid child for some reason
+                as={Card} 
+              >
+              <Card className="h-full transition-all duration-300 ease-in-out border border-transparent">
                 <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-2">
-                  <div className="p-2 bg-accent/10 rounded-lg group-hover:bg-accent/20 transition-colors">
+                  <motion.div 
+                    className="p-2 bg-accent/10 rounded-lg group-hover:bg-accent/20 transition-colors"
+                    whileHover={{ scale: 1.1, rotate: 5}}
+                  >
                     {feature.icon}
-                  </div>
+                  </motion.div>
                   <div className="flex-1">
                     <CardTitle className="text-xl group-hover:text-accent transition-colors">{feature.title}</CardTitle>
                     {feature.ai && (
@@ -79,13 +117,19 @@ export default function DashboardPage() {
                   <CardDescription className="text-muted-foreground group-hover:text-foreground transition-colors">{feature.description}</CardDescription>
                 </CardContent>
               </Card>
+              </motion.custom>
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="mt-12">
-        <Card>
+      <motion.section 
+        className="mt-12"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: features.length * 0.1 + 0.2, duration: 0.5 }}
+      >
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader>
             <CardTitle>Get Started</CardTitle>
             <CardDescription>
@@ -100,7 +144,7 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-      </section>
+      </motion.section>
     </div>
   );
 }

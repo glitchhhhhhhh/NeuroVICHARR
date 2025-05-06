@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer base {
@@ -16,16 +18,16 @@ body {
     --popover-foreground: 216 100% 14%; /* Deep Blue */
     --primary: 216 100% 14%; /* Deep Blue */
     --primary-foreground: 0 0% 98%; /* White for text on primary */
-    --secondary: 0 0% 82.7%; /* Lighter Gray */
+    --secondary: 0 0% 96.1%; /* Lighter Gray - adjusted for subtle difference */
     --secondary-foreground: 216 100% 14%; /* Deep Blue */
-    --muted: 0 0% 90%; /* Even Lighter Gray for muted elements */
+    --muted: 0 0% 92%; /* Even Lighter Gray for muted elements - adjusted */
     --muted-foreground: 0 0% 45.1%; /* Standard muted text */
     --accent: 265 79% 53%; /* Electric Purple */
     --accent-foreground: 0 0% 98%; /* White for text on accent */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 80%; /* Slightly darker gray for borders */
-    --input: 0 0% 80%; /* Slightly darker gray for input borders */
+    --border: 0 0% 89.8%; /* Slightly darker gray for borders - adjusted */
+    --input: 0 0% 89.8%; /* Slightly darker gray for input borders - adjusted */
     --ring: 265 79% 53%; /* Electric Purple for focus rings */
     --chart-1: 216 100% 30%; /* Deep Blue variations for charts */
     --chart-2: 216 80% 40%;
@@ -41,7 +43,7 @@ body {
     --sidebar-primary-foreground: 0 0% 98%; /* White */
     --sidebar-accent: 265 79% 53%; /* Electric Purple */
     --sidebar-accent-foreground: 0 0% 98%; /* White */
-    --sidebar-border: 0 0% 85%; /* Light Gray Border */
+    --sidebar-border: 0 0% 90%; /* Light Gray Border - adjusted */
     --sidebar-ring: 265 79% 53%; /* Electric Purple */
   }
 
@@ -54,7 +56,7 @@ body {
     --popover-foreground: 0 0% 82.7%; /* Light Gray */
     --primary: 0 0% 82.7%; /* Light Gray for primary elements in dark mode */
     --primary-foreground: 216 100% 14%; /* Deep Blue for text on primary */
-    --secondary: 216 100% 15%; /* Darker Blue */
+    --secondary: 216 100% 12%; /* Darker Blue - adjusted */
     --secondary-foreground: 0 0% 82.7%; /* Light Gray */
     --muted: 216 100% 15%; /* Darker Blue */
     --muted-foreground: 0 0% 60%; /* Muted Gray */
@@ -78,7 +80,7 @@ body {
     --sidebar-primary-foreground: 0 0% 98%; /* White */
     --sidebar-accent: 265 79% 53%; /* Electric Purple */
     --sidebar-accent-foreground: 0 0% 98%; /* White */
-    --sidebar-border: 216 100% 25%; /* Slightly lighter Deep Blue for border */
+    --sidebar-border: 216 100% 22%; /* Slightly lighter Deep Blue for border - adjusted */
     --sidebar-ring: 265 79% 63%; /* Brighter Electric Purple */
   }
 }
@@ -90,4 +92,54 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Add subtle transition for color scheme changes */
+body, .bg-background, .text-foreground, .bg-card, .text-card-foreground, .border-border {
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+}
+
+/* Prose styles for markdown content */
+.prose {
+  @apply text-foreground;
+}
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  @apply text-foreground;
+}
+.prose a {
+  @apply text-accent hover:text-accent/80;
+}
+.prose strong {
+  @apply text-foreground;
+}
+.prose blockquote {
+  @apply border-accent text-muted-foreground;
+}
+.prose code {
+  @apply bg-muted text-foreground rounded px-1 py-0.5 text-sm;
+}
+.prose pre {
+  @apply bg-muted p-4 rounded-md text-sm;
+}
+
+.dark .prose {
+   @apply text-foreground;
+}
+.dark .prose h1, .dark .prose h2, .dark .prose h3, .dark .prose h4, .dark .prose h5, .dark .prose h6 {
+  @apply text-foreground;
+}
+.dark .prose a {
+  @apply text-accent hover:text-accent/80;
+}
+.dark .prose strong {
+  @apply text-foreground;
+}
+.dark .prose blockquote {
+  @apply border-accent text-muted-foreground;
+}
+.dark .prose code {
+   @apply bg-muted text-foreground;
+}
+.dark .prose pre {
+  @apply bg-muted;
 }
