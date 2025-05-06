@@ -115,19 +115,19 @@ button, a, input, textarea, select {
   @apply text-foreground max-w-full; 
 }
 .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
-  @apply text-foreground font-bold tracking-tight; /* Adjusted font-weight and tracking */
+  @apply text-foreground font-bold tracking-tight mb-4 mt-6; /* Adjusted font-weight, tracking and margins */
 }
 .prose p, .prose ul, .prose ol, .prose li {
-  @apply text-muted-foreground leading-relaxed; /* Improved line height */
+  @apply text-muted-foreground leading-relaxed mb-4; /* Improved line height and margin */
 }
 .prose a {
-  @apply text-accent hover:text-accent/80 font-medium transition-colors duration-150; /* Added font-medium */
+  @apply text-accent hover:text-accent/80 font-medium transition-colors duration-150 underline underline-offset-2 hover:underline-offset-4; /* Added underline */
 }
 .prose strong {
   @apply text-foreground font-semibold;
 }
 .prose blockquote {
-  @apply border-l-4 border-accent pl-4 italic text-muted-foreground bg-accent/5 py-2 rounded-r-md; /* Added bg and padding */
+  @apply border-l-4 border-accent pl-6 pr-4 py-3 italic text-muted-foreground bg-accent/10 rounded-r-lg shadow-sm; /* Enhanced styling */
 }
 .prose code {
   @apply bg-muted text-accent rounded px-1.5 py-1 text-sm font-mono shadow-sm; /* Changed text color to accent, added shadow */
@@ -138,6 +138,8 @@ button, a, input, textarea, select {
 .prose pre code {
   @apply bg-transparent p-0 shadow-none; /* Reset code style inside pre */
 }
+.prose ul { @apply list-disc list-outside ml-5; }
+.prose ol { @apply list-decimal list-outside ml-5; }
 
 .dark .prose {
    @apply text-foreground;
@@ -155,7 +157,7 @@ button, a, input, textarea, select {
   @apply text-foreground;
 }
 .dark .prose blockquote {
-  @apply border-accent text-muted-foreground bg-accent/10; /* Adjusted for dark */
+  @apply border-accent text-muted-foreground bg-accent/15; /* Adjusted for dark */
 }
 .dark .prose code {
    @apply bg-muted text-accent; /* Changed text color to accent */
@@ -181,3 +183,24 @@ button, a, input, textarea, select {
   animation: gradient-x-animation 5s ease infinite;
 }
 
+
+/* Subtle animated background pattern for main content area */
+@keyframes pattern-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: -160px 160px; } /* Adjust based on pattern size */
+}
+
+.animated-bg-pattern {
+  background-image:
+    radial-gradient(hsl(var(--muted-foreground)) 0.5px, transparent 0.5px),
+    radial-gradient(hsl(var(--muted-foreground)) 0.5px, hsl(var(--background)) 0.5px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+  animation: pattern-scroll 60s linear infinite;
+}
+
+.dark .animated-bg-pattern {
+  background-image:
+    radial-gradient(hsla(var(--foreground), 0.1) 0.5px, transparent 0.5px),
+    radial-gradient(hsla(var(--foreground), 0.1) 0.5px, hsl(var(--background)) 0.5px);
+}

@@ -1,8 +1,8 @@
 
 'use client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"; 
-import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store } from "lucide-react"; // Added Lightbulb, Store
+import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store, Sparkles, Rocket } from "lucide-react"; // Added Sparkles, Rocket
 import Link from "next/link";
 import { motion } from 'framer-motion';
 
@@ -96,7 +96,7 @@ const cardVariants = {
   }),
   hover: {
     scale: 1.04,
-    boxShadow: "0px 15px 30px hsla(var(--card-foreground) / 0.15)", // Enhanced shadow
+    boxShadow: "0px 20px 40px hsla(var(--card-foreground) / 0.2)", // Enhanced shadow
     borderColor: "hsl(var(--accent))",
     transition: { duration: 0.25, ease: "circOut" }
   }
@@ -140,87 +140,151 @@ const FeatureCard: React.FC<{feature: (typeof aiFeatures)[0] | (typeof platformF
   </Link>
 );
 
+const AnimatedSectionTitle: React.FC<{ children: React.ReactNode, className?: string, delay?: number }> = ({ children, className, delay = 0.2 }) => (
+  <motion.h2
+    className={`text-3xl font-bold mb-10 text-foreground sm:text-4xl text-center relative ${className}`}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.6, ease: "easeOut" }}
+  >
+    {children}
+    <motion.div
+      className="absolute bottom-[-8px] left-1/2 -translate-x-1/2 h-1 w-24 bg-gradient-to-r from-primary via-accent to-pink-500 rounded-full"
+      initial={{ width: 0 }}
+      animate={{ width: '6rem' }} // 96px
+      transition={{ delay: delay + 0.3, duration: 0.7, ease: "circOut" }}
+    />
+  </motion.h2>
+);
+
 
 export default function DashboardPage() {
+  const heroTitle = "Welcome to NeuroVichar";
+  const heroSubtitle = "An intelligent platform for collaborative AI-driven insights, pushing the boundaries of what's possible.";
+
+  const titleVariants = {
+    hidden: { opacity: 0 },
+    visible: (i: number) => ({
+      opacity: 1,
+      transition: {
+        delay: i * 0.08,
+        duration: 0.5,
+      },
+    }),
+  };
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-16 md:space-y-24 relative overflow-hidden">
+      {/* Subtle animated background pattern */}
+      <div className="absolute inset-0 -z-10 opacity-5 dark:opacity-[0.03]">
+        <svg width="100%" height="100%">
+          <defs>
+            <pattern id="dashboard-pattern" patternUnits="userSpaceOnUse" width="60" height="60" patternTransform="scale(1) rotate(0)">
+              <path d="M10 10 Q20 0 30 10 T50 10" stroke="hsl(var(--foreground))" strokeWidth="0.5" fill="none"/>
+              <path d="M10 30 Q20 20 30 30 T50 30" stroke="hsl(var(--foreground))" strokeWidth="0.5" fill="none"/>
+              <path d="M10 50 Q20 40 30 50 T50 50" stroke="hsl(var(--foreground))" strokeWidth="0.5" fill="none"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#dashboard-pattern)" />
+        </svg>
+      </div>
+
       <motion.header 
-        className="text-center mb-16"
-        initial={{ opacity: 0, y: -40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: "easeOut" }}
+        className="text-center pt-8 pb-12 md:pt-12 md:pb-16"
+        initial="hidden"
+        animate="visible"
+        transition={{ staggerChildren: 0.1 }}
       >
-        <h1 className="text-5xl font-extrabold tracking-tighter text-foreground sm:text-6xl lg:text-7xl">
-          Welcome to <span 
-            className="bg-gradient-to-r from-primary via-accent to-pink-500 text-transparent bg-clip-text animate-gradient-x"
-            style={{backgroundSize: '200% 200%'}}
-          >NeuroVichar</span>
-        </h1>
-        <p className="text-xl text-muted-foreground mt-5 sm:text-2xl max-w-3xl mx-auto">
-          An intelligent platform for collaborative AI-driven insights, pushing the boundaries of what's possible.
-        </p>
+        <motion.h1 
+          className="text-5xl font-extrabold tracking-tighter text-foreground sm:text-6xl lg:text-7xl mb-6"
+          variants={{
+            hidden: { opacity: 0, y: -30 },
+            visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } }
+          }}
+        >
+          {heroTitle.split("").map((char, i) => (
+            <motion.span key={i} variants={titleVariants} custom={i} className="inline-block">
+              {char === " " && i > 0 && heroTitle[i-1] !== " " ? "\u00A0" : char}
+            </motion.span>
+          ))}
+           <motion.span 
+              className="bg-gradient-to-r from-primary via-accent to-pink-500 text-transparent bg-clip-text animate-gradient-x ml-2"
+              style={{backgroundSize: '200% 200%'}}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: heroTitle.length * 0.08 + 0.2, duration: 0.5}}
+            >!</motion.span>
+        </motion.h1>
+        <motion.p 
+          className="text-xl text-muted-foreground mt-5 sm:text-2xl max-w-3xl mx-auto leading-relaxed"
+           variants={{
+            hidden: { opacity: 0, y: 20 },
+            visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: heroTitle.length * 0.08 + 0.3, ease: "easeOut" } }
+          }}
+        >
+          {heroSubtitle}
+        </motion.p>
       </motion.header>
 
-      <div>
-        <motion.h2 
-          className="text-3xl font-bold mb-8 text-foreground sm:text-4xl text-center"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
+      <section>
+        <AnimatedSectionTitle delay={0.5}>
+          <Sparkles className="inline-block w-10 h-10 mr-3 text-accent transform -translate-y-1" />
           AI-Powered Features
-        </motion.h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        </AnimatedSectionTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {aiFeatures.map((feature, index) => (
             <FeatureCard key={feature.title} feature={feature} index={index} isAI={true} />
           ))}
         </div>
-      </div>
+      </section>
 
-      <div className="mt-16">
-        <motion.h2 
-          className="text-3xl font-bold mb-8 text-foreground sm:text-4xl text-center"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
+      <section className="mt-16 md:mt-24">
+        <AnimatedSectionTitle delay={0.7}>
+          <Rocket className="inline-block w-10 h-10 mr-3 text-primary transform -translate-y-1" />
           Core Platform Capabilities
-        </motion.h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        </AnimatedSectionTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {platformFeatures.map((feature, index) => (
             <FeatureCard key={feature.title} feature={feature} index={index + aiFeatures.length} isAI={false}/>
           ))}
         </div>
-      </div>
+      </section>
 
       <motion.section 
-        className="mt-20"
+        className="mt-20 md:mt-28"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: (aiFeatures.length + platformFeatures.length) * 0.07 + 0.3, duration: 0.6 }}
+        transition={{ delay: (aiFeatures.length + platformFeatures.length) * 0.07 + 0.5, duration: 0.6 }}
       >
-        <Card className="shadow-xl hover:shadow-2xl transition-shadow bg-card/70 backdrop-blur-md border-2 border-primary/20">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl">Unlock Your Potential</CardTitle>
-            <CardDescription className="text-lg mt-1">
+        <Card className="shadow-2xl hover:shadow-purple-500/30 transition-all duration-300 bg-gradient-to-br from-card via-muted/20 to-card/70 backdrop-blur-lg border-2 border-primary/30 rounded-2xl overflow-hidden">
+          <CardHeader className="text-center pt-10 pb-6">
+            <motion.div 
+              animate={{ y: [0, -5, 0] }} 
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="inline-block"
+            >
+              <Sparkles className="w-16 h-16 text-accent mx-auto mb-4" />
+            </motion.div>
+            <CardTitle className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-pink-500">Unlock Your Potential</CardTitle>
+            <CardDescription className="text-lg mt-2 text-muted-foreground max-w-2xl mx-auto">
               Explore the features above or dive into creating your first intelligent prompt.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+          <CardContent className="text-center px-6">
+            <p className="text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
               NeuroVichar empowers you to harness the collective intelligence of multiple AI agents,
               seamlessly integrating diverse data sources and processing capabilities.
               Start by exploring Neuro Synapse or try generating unique visuals with our AI Image Generation tool.
             </p>
-            <div className="mt-8 flex justify-center gap-4">
-                <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-lg hover:shadow-accent/30 transition-all transform hover:scale-105 active:scale-95">
+            <div className="flex flex-col sm:flex-row justify-center gap-4 pb-10">
+                <Button asChild size="lg" className="text-lg py-7 px-10 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-xl hover:shadow-accent/40 transition-all transform hover:scale-105 active:scale-95 rounded-xl">
                     <Link href="/neuro-synapse">
-                        <Brain className="mr-2" /> Explore Neuro Synapse
+                        <Brain className="mr-2.5" /> Explore Neuro Synapse
                     </Link>
                 </Button>
-                 <Button asChild size="lg" variant="outline" className="shadow-md hover:shadow-lg transition-all transform hover:scale-105 active:scale-95">
+                 <Button asChild size="lg" variant="outline" className="text-lg py-7 px-10 border-2 border-input hover:border-accent hover:bg-accent/10 hover:text-accent shadow-lg hover:shadow-lg transition-all transform hover:scale-105 active:scale-95 rounded-xl">
                     <Link href="/ai-image-generation">
-                       <ImageIconLucide className="mr-2"/> Create Images
+                       <ImageIconLucide className="mr-2.5"/> Create Images
                     </Link>
                 </Button>
             </div>
@@ -243,6 +307,4 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-
 

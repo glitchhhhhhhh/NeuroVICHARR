@@ -49,7 +49,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/20 dark:from-background dark:to-muted/10">
+            <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/20 dark:from-background dark:to-muted/10 p-4">
                 <AnimatePresence mode="wait">
                     <motion.div
                     key={pathname}
@@ -57,7 +57,7 @@ export default function RootLayout({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="w-full" 
+                    className="w-full max-w-md" 
                     >
                     {children}
                     </motion.div>
@@ -213,15 +213,27 @@ export default function RootLayout({
                 <UserNav />
               </SidebarFooter>
             </Sidebar>
-            <SidebarInset className="sidebar-inset-content">
+            <SidebarInset className="sidebar-inset-content relative">
+              <div className="absolute inset-0 -z-10 opacity-5 dark:opacity-[0.02] pointer-events-none">
+                 <svg width="100%" height="100%">
+                    <defs>
+                      <pattern id="main-bg-pattern" patternUnits="userSpaceOnUse" width="80" height="80" patternTransform="scale(1) rotate(45)">
+                        <circle cx="10" cy="10" r="1" fill="hsl(var(--foreground))" opacity="0.5"/>
+                        <circle cx="40" cy="40" r="1.5" fill="hsl(var(--foreground))" opacity="0.7"/>
+                         <path d="M0 40 H80 M40 0 V80" stroke="hsl(var(--foreground))" strokeWidth="0.2" opacity="0.3"/>
+                      </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#main-bg-pattern)" />
+                  </svg>
+              </div>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                  className="p-4 md:p-6 lg:p-8 min-h-screen" // Added min-h-screen
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.35, ease: "easeInOut" }}
+                  className="p-4 md:p-6 lg:p-8 min-h-[calc(100vh-theme(spacing.4)-theme(spacing.4))] md:min-h-screen" 
                 >
                   {children}
                 </motion.div>
@@ -234,3 +246,4 @@ export default function RootLayout({
     </html>
   );
 }
+
