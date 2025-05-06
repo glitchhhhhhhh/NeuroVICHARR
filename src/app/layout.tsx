@@ -1,10 +1,11 @@
+
 'use client';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google'; // Changed from Geist
 import './globals.css';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIcon, DollarSign, Lightbulb } from 'lucide-react'; // Added Lightbulb
+import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn } from 'lucide-react'; // Added Lightbulb, UserCircle, Store, LogIn
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
@@ -32,6 +33,44 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const isAuthPage = pathname === '/login' || pathname === '/signup'; // Example auth pages
+
+  if (isAuthPage) {
+    return (
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <title>{String(metadataObject.title)} - Authentication</title>
+          <meta name="description" content={String(metadataObject.description)} />
+        </head>
+        <body className={`${inter.variable} font-sans antialiased`}>
+           <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/20 dark:from-background dark:to-muted/10">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                    key={pathname}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="w-full" 
+                    >
+                    {children}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+            <Toaster />
+          </ThemeProvider>
+        </body>
+      </html>
+    );
+  }
+
+
   return (
     <html lang="en" suppressHydrationWarning>
       {/* It's generally better to set metadata in the Head component of individual pages or a specific _app.js/_document.js if needed dynamically */}
@@ -86,7 +125,7 @@ export default function RootLayout({
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="AI Image Generation">
                       <Link href="/ai-image-generation">
-                        <ImageIcon />
+                        <ImageIconLucide />
                         <span>AI Image Generation</span>
                       </Link>
                     </SidebarMenuButton>
@@ -104,6 +143,14 @@ export default function RootLayout({
                       <Link href="/web-browsing">
                         <Globe />
                         <span>Web Browsing Agents</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Plugin Marketplace">
+                      <Link href="/plugin-marketplace">
+                        <Store />
+                        <span>Plugin Marketplace</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -140,6 +187,23 @@ export default function RootLayout({
                           <span>Sub-Prompt Decomposition</span>
                         </Link>
                       </SidebarMenuButton>
+                    </SidebarMenuItem>
+                     <SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2 pt-4">User Account</SidebarGroupLabel>
+                     <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Profile">
+                        <Link href="/profile">
+                            <UserCircle />
+                            <span>Profile</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Login">
+                        <Link href="/login">
+                            <LogIn />
+                            <span>Login</span>
+                        </Link>
+                        </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarMenu>

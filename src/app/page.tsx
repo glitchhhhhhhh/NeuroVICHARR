@@ -1,7 +1,8 @@
+
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"; 
-import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIcon, DollarSign, Lightbulb } from "lucide-react"; // Added Lightbulb
+import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store } from "lucide-react"; // Added Lightbulb, Store
 import Link from "next/link";
 import { motion } from 'framer-motion';
 
@@ -23,7 +24,7 @@ const aiFeatures = [
   {
     title: "AI Image Generation",
     description: "Create stunning visuals from textual descriptions.",
-    icon: <ImageIcon className="w-8 h-8 text-accent" />,
+    icon: <ImageIconLucide className="w-8 h-8 text-accent" />,
     href: "/ai-image-generation",
     tag: "Creative Suite"
   },
@@ -40,6 +41,13 @@ const aiFeatures = [
     icon: <Globe className="w-8 h-8 text-accent" />,
     href: "/web-browsing",
     tag: "Data Acquisition"
+  },
+  {
+    title: "Plugin Marketplace",
+    description: "Extend NeuroVichar with community and official plugins.",
+    icon: <Store className="w-8 h-8 text-accent" />,
+    href: "/plugin-marketplace",
+    tag: "Ecosystem"
   },
   {
     title: "Revenue Model",
@@ -212,7 +220,7 @@ export default function DashboardPage() {
                 </Button>
                  <Button asChild size="lg" variant="outline" className="shadow-md hover:shadow-lg transition-all transform hover:scale-105 active:scale-95">
                     <Link href="/ai-image-generation">
-                       <ImageIcon className="mr-2"/> Create Images
+                       <ImageIconLucide className="mr-2"/> Create Images
                     </Link>
                 </Button>
             </div>
@@ -235,5 +243,6 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
 
