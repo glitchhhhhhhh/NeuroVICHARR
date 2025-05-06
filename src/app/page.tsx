@@ -159,7 +159,8 @@ const AnimatedSectionTitle: React.FC<{ children: React.ReactNode, className?: st
 
 
 export default function DashboardPage() {
-  const heroTitle = "Welcome to NeuroVichar";
+  const heroTitlePrefix = "Welcome to ";
+  const heroTitleMain = "NeuroVichar";
   const heroSubtitle = "An intelligent platform for collaborative AI-driven insights, pushing the boundaries of what's possible.";
 
   const titleVariants = {
@@ -202,24 +203,36 @@ export default function DashboardPage() {
             visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } }
           }}
         >
-          {heroTitle.split("").map((char, i) => (
-            <motion.span key={i} variants={titleVariants} custom={i} className="inline-block">
-              {char === " " && i > 0 && heroTitle[i-1] !== " " ? "\u00A0" : char}
+          {heroTitlePrefix.split("").map((char, i) => (
+            <motion.span key={`prefix-${i}`} variants={titleVariants} custom={i} className="inline-block">
+              {char === " " && i > 0 && heroTitlePrefix[i-1] !== " " ? "\u00A0" : char}
             </motion.span>
           ))}
            <motion.span 
-              className="bg-gradient-to-r from-primary via-accent to-pink-500 text-transparent bg-clip-text animate-gradient-x ml-2"
+              className="bg-gradient-to-r from-primary via-accent to-pink-500 text-transparent bg-clip-text animate-gradient-x ml-1"
               style={{backgroundSize: '200% 200%'}}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: heroTitle.length * 0.08 + 0.2, duration: 0.5}}
+              transition={{ delay: heroTitlePrefix.length * 0.08, duration: 0.5}}
+            >
+              {heroTitleMain.split("").map((char, i) => (
+                <motion.span key={`main-${i}`} variants={titleVariants} custom={heroTitlePrefix.length + i} className="inline-block">
+                  {char}
+                </motion.span>
+              ))}
+            </motion.span>
+           <motion.span 
+              className="text-foreground" // Ensure exclamation mark matches surrounding text or has its own style
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.08 + 0.2, duration: 0.5}}
             >!</motion.span>
         </motion.h1>
         <motion.p 
           className="text-xl text-muted-foreground mt-5 sm:text-2xl max-w-3xl mx-auto leading-relaxed"
            variants={{
             hidden: { opacity: 0, y: 20 },
-            visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: heroTitle.length * 0.08 + 0.3, ease: "easeOut" } }
+            visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.08 + 0.3, ease: "easeOut" } }
           }}
         >
           {heroSubtitle}
