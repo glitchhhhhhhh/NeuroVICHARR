@@ -125,7 +125,7 @@ Instructions:
         *   From each 'agent-task-XXX' node back to 'neuroSynapse' (representing results).
         *   From 'neuroSynapse' to 'finalAnswer'.
         *   All edges should have an id (e.g., "edge-1") and animated set to true.
-7. **Tool Usage Reporting**: If the `getTopNewsHeadlines` tool or any other tool is invoked, populate the `toolUsages` array in the output. Each entry should specify `toolName`, `toolInput` (what was passed to the tool), and `toolOutput` (what the tool returned).
+7. **Tool Usage Reporting**: If the \`getTopNewsHeadlines\` tool or any other tool is invoked, populate the \`toolUsages\` array in the output. Each entry should specify \`toolName\`, \`toolInput\` (what was passed to the tool), and \`toolOutput\` (what the tool returned).
 
 Output Format:
 Ensure your entire response is a single JSON object matching the NeuroSynapseOutputSchema.
