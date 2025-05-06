@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, type FormEvent, useEffect, useMemo, ChangeEvent } from 'react';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, Zap, Loader2, Workflow, MessageSquare, Activity, CheckCircle2, AlertCircle, Newspaper, Wrench, Lightbulb, Users, ThermometerSnowflake, ImageUp, Image as ImageIcon, Share2, SearchCode, SlidersHorizontal } from "lucide-react"; // Added ImageUp, ImageIcon
+import { Brain, Zap, Loader2, Workflow, MessageSquare, Activity, CheckCircle2, AlertCircle, Newspaper, Wrench, Lightbulb, Users, ThermometerSnowflake, ImageUp, Image as ImageIcon, Share2, SearchCode, SlidersHorizontal, BrainCircuit } from "lucide-react"; // Added ImageUp, ImageIcon, BrainCircuit
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { neuroSynapse, type NeuroSynapseOutput, type SubTask, type ToolUsage } from '@/ai/flows/neuro-synapse-flow';
 import { Separator } from '@/components/ui/separator';
@@ -17,6 +18,8 @@ import NextImage from 'next/image'; // Renamed to avoid conflict with Lucide ico
 import { useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
+
 
 const NodeIcon: React.FC<{ type: NeuroSynapseOutput['workflowDiagramData']['nodes'][0]['type'], className?: string }> = ({ type, className = "w-6 h-6" }) => {
   switch (type) {
@@ -30,7 +33,7 @@ const NodeIcon: React.FC<{ type: NeuroSynapseOutput['workflowDiagramData']['node
   }
 };
 
-const WorkflowDiagramNode: React.FC<{ node: NeuroSynapseOutput['workflowDiagramData']['nodes'][0]['type'], style: React.CSSProperties }> = ({ node, style }) => (
+const WorkflowDiagramNode: React.FC<{ node: NeuroSynapseOutput['workflowDiagramData']['nodes'][0], style: React.CSSProperties }> = ({ node, style }) => (
   <motion.div
     style={style}
     className="absolute transform transition-all duration-500 ease-out"
