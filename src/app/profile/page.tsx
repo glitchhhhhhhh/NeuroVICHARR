@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -14,6 +14,7 @@ import { User, Mail, Edit3, Bell, Shield, Palette, Activity, Sun, Moon, Laptop, 
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link'; // Added import for Link
 
 // Mock data - replace with actual data fetching
 const userProfile = {
@@ -266,3 +267,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
