@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, type FormEvent, useEffect, useMemo } from 'react';
+import { useState, type FormEvent, useEffect, useMemo, ChangeEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, Zap, Loader2, Workflow, MessageSquare, Activity, CheckCircle2, AlertCircle, Newspaper, Wrench, Lightbulb, Users, ThermometerSnowflake } from "lucide-react";
+import { Brain, Zap, Loader2, Workflow, MessageSquare, Activity, CheckCircle2, AlertCircle, Newspaper, Wrench, Lightbulb, Users, ThermometerSnowflake, ImageUp, Image as ImageIcon } from "lucide-react"; // Added ImageUp, ImageIcon
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { neuroSynapse, type NeuroSynapseOutput, type SubTask, type ToolUsage } from '@/ai/flows/neuro-synapse-flow';
 import { Separator } from '@/components/ui/separator';
@@ -13,10 +13,14 @@ import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import NextImage from 'next/image'; // Renamed to avoid conflict with Lucide icon
+import { useSearchParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 const NodeIcon: React.FC<{ type: NeuroSynapseOutput['workflowDiagramData']['nodes'][0]['type'], className?: string }> = ({ type, className = "w-6 h-6" }) => {
   switch (type) {
     case 'input': return <MessageSquare className={className + " text-blue-500"} />;
+    case 'image_input': return <ImageIcon className={className + " text-teal-500"} />;
     case 'process': return <Brain className={className + " text-purple-500"} />;
     case 'agent': return <Users className={className + " text-green-500"} />;
     case 'tool': return <Wrench className={className + " text-orange-500"} />;
@@ -46,27 +50,32 @@ const WorkflowDiagramEdge: React.FC<{
   edgeId: string;
   delay: number;
 }> = ({ sourcePos, targetPos, edgeId, delay }) => {
-  const nodeWidth = 144; // 36 * 4 (w-36)
-  const nodeHeight = 96; // 24 * 4 (h-24)
+  const nodeWidth = 144; 
+  const nodeHeight = 96; 
 
-  // Adjust for node center to node edge
   const sx = sourcePos.x + nodeWidth / 2;
   const sy = sourcePos.y + nodeHeight / 2;
   const tx = targetPos.x + nodeWidth / 2;
   const ty = targetPos.y + nodeHeight / 2;
 
+  // This simple logic might need refinement for complex layouts,
+  // but aims to attach to the 'closest' edge.
+  let sourceEdgeX = sx;
+  let sourceEdgeY = sy;
+  let targetEdgeX = tx;
+  let targetEdgeY = ty;
+
   const dx = tx - sx;
   const dy = ty - sy;
-  const angle = Math.atan2(dy, dx);
 
-  // Calculate intersection points with node boundaries (simplified for rectangles)
-  // This logic can be more precise for different node shapes or edge cases
-  const sourceEdgeX = sx + (nodeWidth / 2) * Math.cos(angle);
-  const sourceEdgeY = sy + (nodeHeight / 2) * Math.sin(angle);
-  const targetEdgeX = tx - (nodeWidth / 2) * Math.cos(angle);
-  const targetEdgeY = ty - (nodeHeight / 2) * Math.sin(angle);
-
-
+  if (Math.abs(dx) > Math.abs(dy)) { // More horizontal than vertical
+    sourceEdgeX = sx + (dx > 0 ? nodeWidth / 2 : -nodeWidth / 2);
+    targetEdgeX = tx + (dx > 0 ? -nodeWidth / 2 : nodeWidth / 2);
+  } else { // More vertical than horizontal
+    sourceEdgeY = sy + (dy > 0 ? nodeHeight / 2 : -nodeHeight / 2);
+    targetEdgeY = ty + (dy > 0 ? -nodeHeight / 2 : nodeHeight / 2);
+  }
+  
   const pathD = `M ${sourceEdgeX},${sourceEdgeY} L ${targetEdgeX},${targetEdgeY}`;
 
   return (
@@ -89,7 +98,7 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
     if (!data || !data.nodes) return {};
 
     const positions: { [key: string]: { x: number; y: number } } = {};
-    const G: { [key: string]: string[] } = {}; // Adjacency list
+    const G: { [key: string]: string[] } = {};
     const inDegree: { [key: string]: number } = {};
     data.nodes.forEach(node => {
       G[node.id] = [];
@@ -121,38 +130,42 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
     const nodeHeight = 96;
     const horizontalGap = 80;
     const verticalGap = 60;
+    const diagramWidth = 800; // Approximate width for centering
 
     Object.entries(levels).forEach(([lvlStr, nodesInLevel]) => {
       const currentLevel = parseInt(lvlStr);
-      const levelWidth = nodesInLevel.length * nodeWidth + (nodesInLevel.length - 1) * horizontalGap;
-      let currentX = (level * (nodeWidth + horizontalGap * 2)) + 50; // X moves with level
-
+      const levelHeight = nodesInLevel.length * nodeHeight + (nodesInLevel.length - 1) * verticalGap;
+      
       nodesInLevel.forEach((nodeId, index) => {
-        // Y is based on index within the level, centered
-        let currentY = index * (nodeHeight + verticalGap) + 50 - ((nodesInLevel.length-1)*(nodeHeight+verticalGap))/2 + 250;
+        const nodeInfo = data.nodes.find(n => n.id === nodeId);
+        let posX = currentLevel * (nodeWidth + horizontalGap) + 50;
+        let posY = (diagramWidth / 2) - (levelHeight / 2) + index * (nodeHeight + verticalGap);
 
-        // Specific adjustments for known node types
-        if (data.nodes.find(n => n.id === nodeId)?.type === 'input') currentX = 50;
-        if (data.nodes.find(n => n.id === nodeId)?.id === 'neuroSynapse') {
-          currentX = 50 + nodeWidth + horizontalGap * 1.5;
-          currentY = 250;
+        // Specific adjustments for input/output nodes
+        if (nodeInfo?.type === 'input' || nodeInfo?.type === 'image_input') {
+          posX = 50;
+          posY = (index * (nodeHeight + verticalGap*1.5)) + (diagramWidth / 2) - levelHeight / (nodesInLevel.length > 1 ? 1.5: 2) ;
+        } else if (nodeInfo?.id === 'neuroSynapse') {
+           posX = 50 + nodeWidth + horizontalGap;
+           posY = (diagramWidth / 2) - (nodeHeight / 2) ; // Center
+        } else if (nodeInfo?.type === 'output') {
+            posX = Math.max(...Object.values(positions).map(p=>p.x), posX - (nodeWidth + horizontalGap)) + nodeWidth + horizontalGap;
+            posY = (diagramWidth / 2) - (nodeHeight / 2); // Center
+        } else { // Agent or Tool nodes
+            posX = 50 + nodeWidth + horizontalGap + (nodeWidth + horizontalGap); // Level 2
+            // Spread them out
+            posY = 50 + index * (nodeHeight + verticalGap) - ((nodesInLevel.length -1) * (nodeHeight + verticalGap))/2 + 250;
+
         }
-        if (data.nodes.find(n => n.id === nodeId)?.type === 'output') {
-            currentX = Math.max(...Object.values(positions).map(p=>p.x), 0) + nodeWidth + horizontalGap * 1.5;
-            currentY = 250;
-        }
-
-
-        positions[nodeId] = { x: currentX, y: currentY };
+        positions[nodeId] = { x: posX, y: posY };
       });
     });
-     // Fallback for any nodes not placed by topological sort (e.g. cycles, disconnected)
+    
     data.nodes.forEach(node => {
         if (!positions[node.id]) {
             positions[node.id] = { x: Math.random() * 400 + 50, y: Math.random() * 300 + 50};
         }
     });
-
 
     return positions;
   }, [data]);
@@ -169,12 +182,12 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
   const allY = Object.values(nodePositions).map(p => p.y);
   const minX = Math.min(0, ...allX);
   const minY = Math.min(0, ...allY);
-  const maxX = Math.max(600, ...allX) + 144 + 50; // node width + padding
-  const maxY = Math.max(450, ...allY) + 96 + 50; // node height + padding
+  const maxX = Math.max(600, ...allX) + 144 + 50; 
+  const maxY = Math.max(450, ...allY) + 96 + 50; 
 
 
   return (
-    <Card className="p-4 border rounded-lg bg-background shadow-xl overflow-auto min-h-[450px] relative">
+    <Card className="p-4 border rounded-lg bg-background shadow-xl overflow-auto min-h-[550px] relative">
       <svg width={maxX - minX + 40} height={maxY - minY + 40} viewBox={`${minX - 20} ${minY - 20} ${maxX - minX + 40} ${maxY - minY + 40}`} className="min-w-full min-h-full">
         <defs>
           <marker
@@ -198,7 +211,6 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
           })}
         </g>
       </svg>
-      {/* Nodes are rendered as HTML elements for easier styling & interaction */}
       {data.nodes.map(node => {
         const pos = nodePositions[node.id];
         if (!pos) return null;
@@ -217,28 +229,24 @@ const SubTaskCard: React.FC<{ task: SubTask, index: number }> = ({ task, index }
 
   switch (task.status) {
     case 'completed':
-      statusIcon = <CheckCircle2 className="w-4 h-4 text-green-500 dark:text-green-400" />;
+      IconComponent = CheckCircle2;
       statusColorClass = 'border-l-4 border-green-500 bg-green-500/5 dark:bg-green-500/10';
       statusTextColor = 'text-green-600 dark:text-green-300';
-      IconComponent = CheckCircle2;
       break;
     case 'processing':
-      statusIcon = <Loader2 className="w-4 h-4 animate-spin text-blue-500 dark:text-blue-400" />;
+      IconComponent = Loader2;
       statusColorClass = 'border-l-4 border-blue-500 bg-blue-500/5 dark:bg-blue-500/10';
       statusTextColor = 'text-blue-600 dark:text-blue-300';
-      IconComponent = Loader2;
       break;
     case 'failed':
-      statusIcon = <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />;
+      IconComponent = AlertCircle;
       statusColorClass = 'border-l-4 border-red-500 bg-red-500/5 dark:bg-red-500/10';
       statusTextColor = 'text-red-600 dark:text-red-300';
-      IconComponent = AlertCircle;
       break;
     default: // pending
-      statusIcon = <ThermometerSnowflake className="w-4 h-4 text-gray-500 dark:text-gray-400" />; // Using ThermometerSnowflake for pending
+      IconComponent = ThermometerSnowflake;
       statusColorClass = 'border-l-4 border-gray-400 bg-gray-400/5 dark:bg-gray-400/10';
       statusTextColor = 'text-gray-600 dark:text-gray-300';
-      IconComponent = ThermometerSnowflake;
   }
 
   return (
@@ -314,17 +322,55 @@ const ToolUsageDisplay: React.FC<{ toolUsage: ToolUsage, index: number }> = ({ t
 
 
 export default function NeuroSynapsePage() {
+  const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<NeuroSynapseOutput | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const { toast } = useToast();
+
+
+  useEffect(() => {
+    const queryPrompt = searchParams.get('prompt');
+    if (queryPrompt) {
+      setPrompt(queryPrompt);
+      // Optionally, trigger submission or just prefill
+      // handleSubmit(new Event('submit') as any); // This might be too aggressive
+    } else {
+      // Default example prompt if not from query
+      setPrompt("What are the latest breakthroughs in quantum computing, how do they compare to classical AI, and what are some recent news headlines about their potential global economic impact?");
+    }
+  }, [searchParams]);
+
+  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "Image Too Large",
+          description: "Please select an image smaller than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setSelectedImage(null);
+      setPreviewImage(null);
+    }
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
-    // Keep previous result during loading for a smoother UX if desired, or set to null
-    // setResult(null); 
 
     try {
       if (!prompt.trim()) {
@@ -332,21 +378,26 @@ export default function NeuroSynapsePage() {
         setIsLoading(false);
         return;
       }
-      const response = await neuroSynapse({ mainPrompt: prompt });
+      
+      let imageDataUri: string | undefined = undefined;
+      if (selectedImage) {
+        imageDataUri = previewImage ?? undefined; // Already in data URI format from FileReader
+      }
+
+      const response = await neuroSynapse({ mainPrompt: prompt, imageDataUri });
       setResult(response);
     } catch (e: any) {
       setError(e.message || 'An unexpected error occurred with Neuro Synapse.');
       console.error("Neuro Synapse error:", e);
+      toast({
+        title: "Synapse Error",
+        description: e.message || 'Failed to process the request.',
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  useEffect(() => {
-    // Pre-fill with an example prompt
-    setPrompt("What are the latest breakthroughs in quantum computing, how do they compare to classical AI, and what are some recent news headlines about their potential global economic impact?");
-  }, []);
-
 
   return (
     <div className="space-y-10">
@@ -373,7 +424,7 @@ export default function NeuroSynapsePage() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-xl text-muted-foreground mt-2 max-w-2xl"
           >
-            Orchestrate AI agents and tools to tackle complex problems and synthesize intelligent insights.
+            Orchestrate AI agents and tools to tackle complex problems. Optionally add image context.
           </motion.p>
         </div>
       </header>
@@ -387,7 +438,7 @@ export default function NeuroSynapsePage() {
           <CardHeader>
             <CardTitle className="text-2xl">Engage Neuro Synapse</CardTitle>
             <CardDescription className="text-base">
-              Enter a complex prompt. Neuro Synapse will decompose it, simulate AI agent processing (and use tools if needed), and synthesize a comprehensive answer.
+              Enter a complex prompt. Optionally upload an image for visual context. Neuro Synapse will decompose, simulate AI agent processing, and synthesize a comprehensive answer.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -404,6 +455,34 @@ export default function NeuroSynapsePage() {
                   className="text-lg p-3 h-12"
                   aria-label="Complex Prompt for Neuro Synapse"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="image-input" className="text-md font-medium">Optional Image Context (Max 5MB)</Label>
+                <div className="flex items-center gap-4">
+                    <Input
+                    id="image-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    disabled={isLoading}
+                    className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    aria-label="Optional image input for Neuro Synapse"
+                    />
+                    {previewImage && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => {setSelectedImage(null); setPreviewImage(null); (document.getElementById('image-input') as HTMLInputElement).value = '';}}>
+                        Clear Image
+                    </Button>
+                    )}
+                </div>
+                {previewImage && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }} 
+                    animate={{ opacity: 1, height: 'auto' }} 
+                    className="mt-3 p-2 border border-dashed rounded-lg bg-muted/50 inline-block"
+                  >
+                    <NextImage src={previewImage} alt="Selected image preview" width={100} height={100} className="rounded-md object-contain max-h-[100px]" />
+                  </motion.div>
+                )}
               </div>
               {error && (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
@@ -437,7 +516,7 @@ export default function NeuroSynapsePage() {
       <AnimatePresence>
         {isLoading && (
            <motion.div
-            key="loading-indicator"
+            key="loading-indicator-ns"
             initial={{ opacity: 0, height: 0, y: 20 }}
             animate={{ opacity: 1, height: 'auto', y: 0 }}
             exit={{ opacity: 0, height: 0, y: -20, transition: { duration: 0.3 } }}
@@ -450,7 +529,7 @@ export default function NeuroSynapsePage() {
                   <Loader2 className="mr-3 h-6 w-6 animate-spin text-accent" />
                   Neuro Synapse is Thinking...
                 </CardTitle>
-                <CardDescription className="text-base">Decomposing prompt, simulating agent tasks, potentially using tools, and synthesizing results. This may take a moment.</CardDescription>
+                <CardDescription className="text-base">Decomposing prompt, analyzing image (if provided), simulating agent tasks, potentially using tools, and synthesizing results. This may take a moment.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 p-6">
                 {[...Array(3)].map((_, i) => (
@@ -469,7 +548,7 @@ export default function NeuroSynapsePage() {
       <AnimatePresence>
       {result && !isLoading && (
         <motion.div
-          key="result-section"
+          key="result-section-ns"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -30, transition: { duration: 0.3 } }}
@@ -478,11 +557,20 @@ export default function NeuroSynapsePage() {
         >
           <Card className="shadow-xl bg-card/90 backdrop-blur-sm">
             <CardHeader className="pb-4 border-b border-border/50">
-              <CardTitle className="text-3xl flex items-center gap-3">
-                <Brain className="w-9 h-9 text-accent drop-shadow-md" />
-                Neuro Synapse Output
-              </CardTitle>
-              <CardDescription className="text-base mt-1">Results from the orchestrated AI processing pipeline.</CardDescription>
+              <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle className="text-3xl flex items-center gap-3">
+                        <Brain className="w-9 h-9 text-accent drop-shadow-md" />
+                        Neuro Synapse Output
+                    </CardTitle>
+                    <CardDescription className="text-base mt-1">Results from the orchestrated AI processing pipeline.</CardDescription>
+                </div>
+                {result.hasImageContext && (
+                    <Badge variant="outline" className="text-sm border-teal-500 text-teal-600 bg-teal-500/10 py-1 px-3 flex items-center gap-1.5">
+                        <ImageIcon className="w-4 h-4" /> Image Context Used
+                    </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-8 pt-6">
               
@@ -502,7 +590,7 @@ export default function NeuroSynapsePage() {
                 </h3>
                 <Card className="bg-primary/5 border-2 border-primary/20 shadow-md hover:shadow-lg transition-shadow">
                   <CardContent className="p-5">
-                    <p className="text-foreground/95 leading-relaxed text-md prose prose-sm dark:prose-invert max-w-none">{result.synthesizedAnswer}</p>
+                    <div className="text-foreground/95 leading-relaxed text-md prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: result.synthesizedAnswer.replace(/\n/g, '<br />') }} />
                   </CardContent>
                 </Card>
               </motion.section>
@@ -529,7 +617,7 @@ export default function NeuroSynapsePage() {
               <div className="grid md:grid-cols-2 gap-8 items-start">
                 <motion.section className="space-y-4" initial={{opacity:0, x:-20}} animate={{opacity:1,x:0}} transition={{delay:0.45, ease:"easeOut"}}>
                   <h3 className="text-xl font-semibold text-foreground flex items-center gap-2.5">
-                    <Users className="w-6 h-6 text-green-500" /> {/* Changed icon */}
+                    <Users className="w-6 h-6 text-green-500" />
                     Decomposed Sub-Tasks
                   </h3>
                    <ScrollArea className="h-[400px] pr-3 -mr-1 border p-3 rounded-lg bg-muted/20 shadow-inner">
@@ -545,9 +633,9 @@ export default function NeuroSynapsePage() {
                     Workflow Explanation
                   </h3>
                   <Card className="bg-muted/40 shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-5 text-md text-muted-foreground/95 leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                    <CardContent className="p-5 text-md text-muted-foreground/95 leading-relaxed">
                        <ScrollArea className="h-[360px] pr-2">
-                        {result.workflowExplanation}
+                        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: result.workflowExplanation.replace(/\n/g, '<br />') }} />
                        </ScrollArea>
                     </CardContent>
                   </Card>
@@ -573,19 +661,20 @@ export default function NeuroSynapsePage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: (result && !isLoading) ? 0.7 : 0.5 }} // Adjust delay based on result presence
+        transition={{ duration: 0.5, delay: (result && !isLoading) ? 0.7 : 0.5 }}
       >
       <Card className="mt-12 bg-card/80 backdrop-blur-sm shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl">About Neuro Synapse</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-base leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-           Neuro Synapse orchestrates sophisticated AI collaboration by intelligently deconstructing complex user prompts into granular sub-tasks. 
+          <div className="text-muted-foreground text-base leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+           <p>Neuro Synapse orchestrates sophisticated AI collaboration by intelligently deconstructing complex user prompts—and optional visual context from images—into granular sub-tasks. 
            These tasks are then virtually assigned to specialized AI agents, which can leverage integrated tools for real-time data acquisition or external actions. 
            The processed information and agent-derived insights are meticulously synthesized to produce a coherent, comprehensive, and nuanced final output. 
-           This interactive demonstration showcases this entire pipeline, from prompt decomposition and tool integration through to final synthesis, providing a transparent view into the AI's reasoning process.
-          </p>
+           This interactive demonstration showcases this entire pipeline, from prompt and image decomposition and tool integration through to final synthesis, providing a transparent view into the AI's reasoning process.
+           </p>
+          </div>
         </CardContent>
       </Card>
       </motion.div>
@@ -593,3 +682,4 @@ export default function NeuroSynapsePage() {
     </div>
   );
 }
+

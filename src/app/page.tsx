@@ -1,14 +1,21 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"; 
-import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIcon, DollarSign } from "lucide-react"; // Removed unused Settings2, Users, Package
+import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIcon, DollarSign, Lightbulb } from "lucide-react"; // Added Lightbulb
 import Link from "next/link";
 import { motion } from 'framer-motion';
 
 const aiFeatures = [
   {
+    title: "Idea Catalyst",
+    description: "Generates complex questions and starter prompts from a theme.",
+    icon: <Lightbulb className="w-8 h-8 text-accent" />,
+    href: "/idea-catalyst",
+    tag: "Pre-computation AI"
+  },
+  {
     title: "Neuro Synapse",
-    description: "Intelligently divides prompts and delegates to AI agents.",
+    description: "Intelligently divides prompts and delegates to AI agents, with optional image context.",
     icon: <Brain className="w-8 h-8 text-accent" />,
     href: "/neuro-synapse",
     tag: "Core AI Engine"
@@ -228,4 +235,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
