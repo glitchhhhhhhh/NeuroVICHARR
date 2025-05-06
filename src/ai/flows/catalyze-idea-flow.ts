@@ -11,12 +11,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const CatalyzeIdeaInputSchema = z.object({
+const CatalyzeIdeaInputSchema = z.object({
   theme: z.string().describe('A general theme or topic for exploration.'),
 });
 export type CatalyzeIdeaInput = z.infer<typeof CatalyzeIdeaInputSchema>;
 
-export const CatalyzeIdeaOutputSchema = z.object({
+const CatalyzeIdeaOutputSchema = z.object({
   originalTheme: z.string().describe('The original theme provided by the user.'),
   potentialQuestions: z.array(z.string()).describe('A list of 3-5 complex questions or research directions related to the theme, suitable for deep AI analysis.'),
   suggestedAgents: z.array(z.string()).describe('A list of 2-3 virtual agent types (e.g., "Data Analyst", "Creative Strategist", "Technical Writer") that could contribute to exploring the theme.'),

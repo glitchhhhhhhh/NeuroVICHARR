@@ -28,13 +28,13 @@ const ToolUsageSchema = z.object({
 });
 export type ToolUsage = z.infer<typeof ToolUsageSchema>;
 
-export const NeuroSynapseInputSchema = z.object({
+const NeuroSynapseInputSchema = z.object({
   mainPrompt: z.string().describe('The complex user prompt to be processed by Neuro Synapse.'),
   imageDataUri: z.string().optional().describe("Optional image data for context, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
 });
 export type NeuroSynapseInput = z.infer<typeof NeuroSynapseInputSchema>;
 
-export const NeuroSynapseOutputSchema = z.object({
+const NeuroSynapseOutputSchema = z.object({
   originalPrompt: z.string().describe('The original prompt received from the user.'),
   hasImageContext: z.boolean().describe('Whether image context was provided and considered.'),
   decomposedTasks: z.array(SubTaskSchema).describe('An array of sub-tasks identified and delegated by Neuro Synapse.'),
@@ -121,8 +121,7 @@ Instructions:
     *   Nodes: 'input' (mainPrompt), 'image_input' (if imageDataUri is present), 'process' (Neuro Synapse), 'agent' nodes for sub-tasks, 'tool' nodes (if used), 'output' (finalAnswer).
     *   If 'imageDataUri' is present, add an 'image_input' node (e.g., { id: 'imageContext', label: 'Image Context', type: 'image_input' }) and connect it to 'neuroSynapse'.
     *   Edges: Connect nodes logically (e.g., 'mainPrompt' & 'imageContext' (if present) to 'neuroSynapse', 'neuroSynapse' to agents/tools, agents/tools to 'neuroSynapse', 'neuroSynapse' to 'finalAnswer'). All edges animated.
-7.  **Tool Usage Reporting**: Populate 'toolUsages' array.
-8.  **Image Context Flag**: Set 'hasImageContext' to true if 'imageDataUri' was provided, false otherwise.
+7.  **Tool Usage Reporting**: If the getTopNewsHeadlines tool or any other tool is invoked, populate the toolUsages array in the output. Each entry should specify toolName, toolInput (what was passed to the tool), and toolOutput (what the tool returned).
 
 Output Format:
 Ensure your entire response is a single JSON object matching the NeuroSynapseOutputSchema.
