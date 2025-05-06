@@ -1,3 +1,4 @@
+
 // 'use server';
 /**
  * @fileOverview A real-time data analysis AI agent that can browse the web and identify trends and insights.
@@ -31,6 +32,12 @@ const RealTimeDataAnalysisInputSchema = z.object({
 
 export type RealTimeDataAnalysisInput = z.infer<typeof RealTimeDataAnalysisInputSchema>;
 
+// Add webPageContent to the input schema for the prompt
+const AnalyzeDataPromptInputSchema = RealTimeDataAnalysisInputSchema.extend({
+  webPageContent: z.string().describe('The content of the web page fetched from the data source.'),
+});
+
+
 const RealTimeDataAnalysisOutputSchema = z.object({
   trends: z.array(
     z.object({
@@ -55,7 +62,7 @@ export async function realTimeDataAnalysis(input: RealTimeDataAnalysisInput): Pr
 
 const analyzeDataPrompt = ai.definePrompt({
   name: 'analyzeDataPrompt',
-  input: {schema: RealTimeDataAnalysisInputSchema},
+  input: {schema: AnalyzeDataPromptInputSchema}, // Use the extended schema
   output: {schema: RealTimeDataAnalysisOutputSchema},
   prompt: `You are an expert data analyst specializing in real-time web data analysis.
 
@@ -63,20 +70,13 @@ You will analyze the data from the provided data source to identify trends and i
 
 Data Source URL: {{{dataSource}}}
 Analysis Type: {{{analysisType}}}
-Keywords: {{{keywords}}}
+{{#if keywords}}Keywords: {{{keywords}}}{{/if}}
 
 Web Page Content:
-{{#if dataSource}}
-  {{#await browseWebPage dataSource}}
-   {{{content}}}
-  {{/await}}
-{{else}}
-  No data source provided.
-{{/if}}
-
+{{{webPageContent}}}
 
 Analyze the data and provide a summary of the analysis, a list of identified trends, and a list of insights.
-`, // Removed Handlebars helper, using webBrowser service to fetch content
+`,
 });
 
 const realTimeDataAnalysisFlow = ai.defineFlow(
@@ -86,11 +86,11 @@ const realTimeDataAnalysisFlow = ai.defineFlow(
     outputSchema: RealTimeDataAnalysisOutputSchema,
   },
   async input => {
-    const webPageContent = await browseWebPage(input.dataSource);
+    const webPage = await browseWebPage(input.dataSource);
 
     const {output} = await analyzeDataPrompt({
       ...input,
-      webPageContent,
+      webPageContent: webPage.content, // Pass the fetched content to the prompt
     });
     return output!;
   }

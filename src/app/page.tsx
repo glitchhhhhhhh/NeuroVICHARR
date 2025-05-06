@@ -1,5 +1,6 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Zap, Share2, SearchCode, Globe } from "lucide-react";
+import { Brain, Zap, Share2, SearchCode, Globe, BrainCircuit } from "lucide-react";
 import Link from "next/link";
 
 const features = [
@@ -20,7 +21,7 @@ const features = [
   {
     title: "Neural Interface",
     description: "Intuitive LLM-powered prompt submission.",
-    icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-brain-circuit text-accent"><path d="M12 5a3 3 0 1 0-5.997.125"/><path d="M12 5a3 3 0 1 1 5.997.125"/><path d="M15 11a3 3 0 1 0-5.997.125"/><path d="M15 11a3 3 0 1 1 5.997.125"/><path d="M9 11a3 3 0 1 0-5.997.125"/><path d="M9 11a3 3 0 1 1 5.997.125"/><path d="M12 17a3 3 0 1 0-5.997.125"/><path d="M12 17a3 3 0 1 1 5.997.125"/><path d="M14 5.5a3 3 0 0 0-2-1"/><path d="M10 5.5a3 3 0 0 1 2-1"/><path d="M17 11.5a3 3 0 0 0-2-1"/><path d="M13 11.5a3 3 0 0 1 2-1"/><path d="M11 11.5a3 3 0 0 0-2-1"/><path d="M7 11.5a3 3 0 0 1 2-1"/><path d="M14 17.5a3 3 0 0 0-2-1"/><path d="M10 17.5a3 3 0 0 1 2-1"/><circle cx="12" cy="12" r="11"/><path d="M17.5 14a3 3 0 0 0-1-2"/><path d="M17.5 10a3 3 0 0 0-1 2"/><path d="M6.5 14a3 3 0 0 1 1-2"/><path d="M6.5 10a3 3 0 0 1 1 2"/><path d="M14 6.5a3 3 0 0 0-2 1"/><path d="M10 6.5a3 3 0 0 1 2 1"/><path d="M14 17.5a3 3 0 0 0-2-1"/><path d="M10 17.5a3 3 0 0 1 2-1"/></svg>,
+    icon: <BrainCircuit className="w-8 h-8 text-accent" />,
     href: "/neural-interface",
     ai: true,
   },
