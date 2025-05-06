@@ -22,7 +22,7 @@ const inter = Inter({
 
 export const metadataObject: Metadata = {
   title: 'NeuroVichar - Vichar Before Prahar',
-  description: 'Intelligent Prompt Collaboration Platform - Vichar Before Prahar',
+  description: 'Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with inteliigence',
 };
 
 export default function RootLayout({

@@ -161,7 +161,7 @@ const AnimatedSectionTitle: React.FC<{ children: React.ReactNode, className?: st
 export default function DashboardPage() {
   const heroTitlePrefix = "Welcome to ";
   const heroTitleMain = "NeuroVichar";
-  const heroSubtitle = "Vichar Before Prahar";
+  const heroSubtitle = "Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with inteliigence";
 
   const titleVariants = {
     hidden: { opacity: 0 },
