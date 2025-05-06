@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from '@/components/ui/badge';
 import { Store, Puzzle, Download, Star, Filter, Search, ChevronDown, type LucideIcon } from "lucide-react";
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Plugin } from '@/types/plugin';
 import {
   DropdownMenu,
