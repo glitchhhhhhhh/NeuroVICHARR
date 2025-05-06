@@ -101,6 +101,8 @@ const cardVariants = {
   }),
 };
 
+const MotionCard = motion(Card);
+
 export default function RevenueModelPage() {
   return (
     <div className="space-y-16">
@@ -142,14 +144,12 @@ export default function RevenueModelPage() {
         </motion.h2>
         <div className="grid md:grid-cols-3 gap-8 items-stretch">
           {pricingTiers.map((tier, index) => (
-            <motion.custom
+            <MotionCard
               key={tier.name}
               variants={cardVariants}
               initial="hidden"
               animate="visible"
               custom={index + 2} // Adjust delay index
-              // @ts-ignore
-              as={Card}
               className={`flex flex-col rounded-xl shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 bg-card/85 backdrop-blur-md ${tier.highlight ? 'border-4 border-accent ring-4 ring-accent/30' : 'border-primary/20'}`}
             >
               <CardHeader className="text-center p-6">
@@ -182,7 +182,7 @@ export default function RevenueModelPage() {
                   <Link href={tier.href}>{tier.cta}</Link>
                 </Button>
               </CardFooter>
-            </motion.custom>
+            </MotionCard>
           ))}
         </div>
       </section>
@@ -199,14 +199,12 @@ export default function RevenueModelPage() {
         </motion.h2>
         <div className="grid md:grid-cols-2 gap-8">
           {otherRevenueStreams.map((stream, index) => (
-            <motion.custom
+            <MotionCard
               key={stream.title}
               variants={cardVariants}
               initial="hidden"
               animate="visible"
               custom={index + 5} // Adjust delay index
-              // @ts-ignore
-              as={Card}
               className={`rounded-xl shadow-xl hover:shadow-${stream.color}-500/20 transition-all duration-300 bg-card/80 backdrop-blur-sm border-${stream.color}-500/30 border-2`}
             >
               <CardHeader className="flex flex-row items-center gap-4 p-6">
@@ -218,7 +216,7 @@ export default function RevenueModelPage() {
               <CardContent className="p-6 pt-0">
                 <p className="text-muted-foreground leading-relaxed">{stream.description}</p>
               </CardContent>
-            </motion.custom>
+            </MotionCard>
           ))}
         </div>
       </section>
@@ -283,3 +281,4 @@ export default function RevenueModelPage() {
     </div>
   );
 }
+

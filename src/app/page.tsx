@@ -1,7 +1,7 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button"; // Added import
-import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIcon, DollarSign, Settings2, Users, Package } from "lucide-react";
+import { Button } from "@/components/ui/button"; 
+import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIcon, DollarSign } from "lucide-react"; // Removed unused Settings2, Users, Package
 import Link from "next/link";
 import { motion } from 'framer-motion';
 
@@ -87,44 +87,41 @@ const cardVariants = {
   }
 };
 
+const MotionCard = motion(Card);
 
 const FeatureCard: React.FC<{feature: (typeof aiFeatures)[0] | (typeof platformFeatures)[0], index: number, isAI: boolean}> = ({ feature, index, isAI }) => (
   <Link href={feature.href} key={feature.title} className="group block rounded-xl overflow-hidden h-full"> {/* Ensure h-full for parent to take effect */}
-    <motion.custom
+    <MotionCard
       variants={cardVariants}
       initial="hidden"
       animate="visible"
       whileHover="hover"
       custom={index}
-      className="h-full" // Card should take full height of the Link
-      // @ts-ignore
-      as={Card} 
+      className="h-full flex flex-col transition-all duration-300 ease-in-out border-2 border-transparent group-hover:border-accent bg-card/80 backdrop-blur-sm group-hover:bg-card/95 group-hover:shadow-accent/10 shadow-lg"
     >
-      <Card className="h-full flex flex-col transition-all duration-300 ease-in-out border-2 border-transparent group-hover:border-accent bg-card/80 backdrop-blur-sm group-hover:bg-card/95 group-hover:shadow-accent/10 shadow-lg">
-        <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-3 pt-5 px-5">
-          <motion.div
-            className={`p-3 rounded-lg ${isAI ? 'bg-accent/10' : 'bg-primary/10'} group-hover:bg-accent/20 transition-colors`}
-            whileHover={{ scale: 1.15, rotate: 7 }}
-            transition={{ type: "spring", stiffness: 300, damping: 10 }}
-          >
-            {feature.icon}
-          </motion.div>
-          <div className="flex-1">
-            <CardTitle className="text-xl group-hover:text-accent transition-colors">{feature.title}</CardTitle>
-            {feature.tag && (
-              <span className={`mt-1 inline-block text-xs font-semibold py-0.5 px-2 rounded-full transition-colors ${isAI ? 'bg-primary/10 text-primary group-hover:bg-accent/10 group-hover:text-accent' : 'bg-accent/10 text-accent group-hover:bg-primary/10 group-hover:text-primary'}`}>
-                {feature.tag}
-              </span>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="px-5 pb-5 flex-grow"> {/* flex-grow to push description down */}
-          <CardDescription className="text-muted-foreground group-hover:text-foreground/90 transition-colors leading-relaxed">
-            {feature.description}
-          </CardDescription>
-        </CardContent>
-      </Card>
-    </motion.custom>
+      <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-3 pt-5 px-5">
+        <motion.div
+          className={`p-3 rounded-lg ${isAI ? 'bg-accent/10' : 'bg-primary/10'} group-hover:bg-accent/20 transition-colors`}
+          whileHover={{ scale: 1.15, rotate: 7 }}
+          transition={{ type: "spring", stiffness: 300, damping: 10 }}
+        >
+          {feature.icon}
+        </motion.div>
+        <div className="flex-1">
+          <CardTitle className="text-xl group-hover:text-accent transition-colors">{feature.title}</CardTitle>
+          {feature.tag && (
+            <span className={`mt-1 inline-block text-xs font-semibold py-0.5 px-2 rounded-full transition-colors ${isAI ? 'bg-primary/10 text-primary group-hover:bg-accent/10 group-hover:text-accent' : 'bg-accent/10 text-accent group-hover:bg-primary/10 group-hover:text-primary'}`}>
+              {feature.tag}
+            </span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="px-5 pb-5 flex-grow"> {/* flex-grow to push description down */}
+        <CardDescription className="text-muted-foreground group-hover:text-foreground/90 transition-colors leading-relaxed">
+          {feature.description}
+        </CardDescription>
+      </CardContent>
+    </MotionCard>
   </Link>
 );
 
@@ -231,3 +228,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
