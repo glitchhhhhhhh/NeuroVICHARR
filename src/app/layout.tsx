@@ -2,9 +2,9 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google'; // Changed from Geist
 import './globals.css';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIcon } from 'lucide-react';
+import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIcon, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
@@ -84,34 +84,10 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Parallel Processing">
-                      <Link href="/parallel-processing">
-                        <Zap />
-                        <span>Parallel Processing</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="Neural Interface">
                       <Link href="/neural-interface">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-brain-circuit"><path d="M12 5a3 3 0 1 0-5.997.125"/><path d="M12 5a3 3 0 1 1 5.997.125"/><path d="M15 11a3 3 0 1 0-5.997.125"/><path d="M15 11a3 3 0 1 1 5.997.125"/><path d="M9 11a3 3 0 1 0-5.997.125"/><path d="M9 11a3 3 0 1 1 5.997.125"/><path d="M12 17a3 3 0 1 0-5.997.125"/><path d="M12 17a3 3 0 1 1 5.997.125"/><path d="M14 5.5a3 3 0 0 0-2-1"/><path d="M10 5.5a3 3 0 0 1 2-1"/><path d="M17 11.5a3 3 0 0 0-2-1"/><path d="M13 11.5a3 3 0 0 1 2-1"/><path d="M11 11.5a3 3 0 0 0-2-1"/><path d="M7 11.5a3 3 0 0 1 2-1"/><path d="M14 17.5a3 3 0 0 0-2-1"/><path d="M10 17.5a3 3 0 0 1 2-1"/><circle cx="12" cy="12" r="11"/><path d="M17.5 14a3 3 0 0 0-1-2"/><path d="M17.5 10a3 3 0 0 0-1 2"/><path d="M6.5 14a3 3 0 0 1 1-2"/><path d="M6.5 10a3 3 0 0 1 1 2"/><path d="M14 6.5a3 3 0 0 0-2 1"/><path d="M10 6.5a3 3 0 0 1 2 1"/><path d="M14 17.5a3 3 0 0 0-2-1"/><path d="M10 17.5a3 3 0 0 1 2-1"/></svg>
                         <span>Neural Interface</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Distributed Power">
-                      <Link href="/distributed-power">
-                        <Share2 />
-                        <span>Distributed Power</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Sub-Prompt Decomposition">
-                      <Link href="/sub-prompt-decomposition">
-                        <SearchCode />
-                        <span>Sub-Prompt Decomposition</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -123,6 +99,41 @@ export default function RootLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Revenue Model">
+                      <Link href="/revenue-model">
+                        <DollarSign />
+                        <span>Revenue Model</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenu className="mt-auto pt-4 border-t border-border/30"> {/* Section for non-AI features */}
+                    <SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2 pt-2">Platform Features</SidebarGroupLabel>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild tooltip="Parallel Processing">
+                        <Link href="/parallel-processing">
+                          <Zap />
+                          <span>Parallel Processing</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild tooltip="Distributed Power">
+                        <Link href="/distributed-power">
+                          <Share2 />
+                          <span>Distributed Power</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild tooltip="Sub-Prompt Decomposition">
+                        <Link href="/sub-prompt-decomposition">
+                          <SearchCode />
+                          <span>Sub-Prompt Decomposition</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
                 </SidebarMenu>
               </SidebarContent>
               <SidebarFooter className="p-4 flex items-center justify-between">

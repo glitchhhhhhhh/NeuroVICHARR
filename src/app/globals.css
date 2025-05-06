@@ -166,3 +166,18 @@ button, a, input, textarea, select {
 .dark .prose pre code {
   @apply bg-transparent;
 }
+
+/* Animation for gradient text */
+@keyframes gradient-x-animation {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+.animate-gradient-x {
+  background-size: 200% 200%; /* Ensure the background is large enough for the animation */
+  animation: gradient-x-animation 5s ease infinite;
+}
+
