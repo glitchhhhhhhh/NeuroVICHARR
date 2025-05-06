@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,129 +11,132 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* Light Gray */
-    --foreground: 216 100% 14%; /* Deep Blue for text */
-    --card: 0 0% 100%; /* Light Gray */
-    --card-foreground: 216 100% 14%; /* Deep Blue */
-    --popover: 0 0% 100%; /* Light Gray */
-    --popover-foreground: 216 100% 14%; /* Deep Blue */
-    --primary: 216 100% 14%; /* Deep Blue */
-    --primary-foreground: 0 0% 98%; /* White for text on primary */
-    --secondary: 0 0% 96.1%; /* Lighter Gray - adjusted for subtle difference */
-    --secondary-foreground: 216 100% 14%; /* Deep Blue */
-    --muted: 0 0% 92%; /* Even Lighter Gray for muted elements - adjusted */
-    --muted-foreground: 0 0% 45.1%; /* Standard muted text */
-    --accent: 265 79% 53%; /* Electric Purple */
-    --accent-foreground: 0 0% 98%; /* White for text on accent */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%; /* Slightly darker gray for borders - adjusted */
-    --input: 0 0% 89.8%; /* Slightly darker gray for input borders - adjusted */
-    --ring: 265 79% 53%; /* Electric Purple for focus rings */
-    --chart-1: 216 100% 30%; /* Deep Blue variations for charts */
-    --chart-2: 216 80% 40%;
-    --chart-3: 265 70% 60%; /* Purple variations for charts */
-    --chart-4: 265 60% 70%;
-    --chart-5: 0 0% 50%; /* Neutral gray for charts */
-    --radius: 0.5rem;
+    --background: 0 0% 98%; /* Very Light Gray, almost white */
+    --foreground: 220 15% 25%; /* Dark Cool Gray for text */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 220 15% 25%; /* Dark Cool Gray */
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 220 15% 25%; /* Dark Cool Gray */
+    --primary: 260 70% 55%; /* Rich Purple */
+    --primary-foreground: 0 0% 100%; /* White for text on primary */
+    --secondary: 0 0% 94%; /* Light Gray */
+    --secondary-foreground: 220 10% 40%; /* Medium Gray */
+    --muted: 0 0% 90%; /* Lighter Gray for muted elements */
+    --muted-foreground: 0 0% 50%; /* Standard muted text */
+    --accent: 330 80% 60%; /* Vibrant Pink/Magenta */
+    --accent-foreground: 0 0% 100%; /* White for text on accent */
+    --destructive: 0 75% 55%; /* Strong Red */
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 88%; /* Light Gray Border */
+    --input: 0 0% 85%; /* Slightly darker gray for input borders */
+    --ring: 260 70% 65%; /* Lighter Rich Purple for focus rings */
+    --chart-1: 260 70% 50%; 
+    --chart-2: 330 75% 55%;
+    --chart-3: 210 70% 50%; /* Bright Blue */
+    --chart-4: 30 90% 55%; /* Bright Orange */
+    --chart-5: 120 50% 50%; /* Muted Green */
+    --radius: 0.75rem; /* Slightly larger radius */
 
     /* Sidebar Light Theme */
-    --sidebar-background: 0 0% 98%; /* Very Light Gray, almost white */
-    --sidebar-foreground: 216 100% 14%; /* Deep Blue */
-    --sidebar-primary: 216 100% 14%; /* Deep Blue */
-    --sidebar-primary-foreground: 0 0% 98%; /* White */
-    --sidebar-accent: 265 79% 53%; /* Electric Purple */
-    --sidebar-accent-foreground: 0 0% 98%; /* White */
-    --sidebar-border: 0 0% 90%; /* Light Gray Border - adjusted */
-    --sidebar-ring: 265 79% 53%; /* Electric Purple */
+    --sidebar-background: 0 0% 96%; /* Off-white */
+    --sidebar-foreground: 220 15% 25%; /* Dark Cool Gray */
+    --sidebar-primary: 260 70% 55%; /* Rich Purple */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 330 80% 60%; /* Vibrant Pink/Magenta */
+    --sidebar-accent-foreground: 0 0% 100%; /* White */
+    --sidebar-border: 0 0% 85%; 
+    --sidebar-ring: 260 70% 65%;
   }
 
   .dark {
-    --background: 216 100% 8%; /* Very Dark Blue, almost black */
-    --foreground: 0 0% 82.7%; /* Light Gray for text */
-    --card: 216 100% 10%; /* Dark Blue */
-    --card-foreground: 0 0% 82.7%; /* Light Gray */
-    --popover: 216 100% 10%; /* Dark Blue */
-    --popover-foreground: 0 0% 82.7%; /* Light Gray */
-    --primary: 0 0% 82.7%; /* Light Gray for primary elements in dark mode */
-    --primary-foreground: 216 100% 14%; /* Deep Blue for text on primary */
-    --secondary: 216 100% 12%; /* Darker Blue - adjusted */
-    --secondary-foreground: 0 0% 82.7%; /* Light Gray */
-    --muted: 216 100% 15%; /* Darker Blue */
-    --muted-foreground: 0 0% 60%; /* Muted Gray */
-    --accent: 265 79% 63%; /* Brighter Electric Purple */
-    --accent-foreground: 0 0% 98%; /* White for text on accent */
-    --destructive: 0 70% 50%; /* Darker Red */
-    --destructive-foreground: 0 0% 98%;
-    --border: 216 100% 20%; /* Dark Blue Border */
-    --input: 216 100% 20%; /* Dark Blue Input Border */
-    --ring: 265 79% 63%; /* Brighter Electric Purple for focus rings */
-    --chart-1: 216 70% 50%; /* Adjusted for dark mode */
-    --chart-2: 216 60% 40%;
-    --chart-3: 265 70% 60%;
-    --chart-4: 265 60% 50%;
-    --chart-5: 0 0% 70%;
+    --background: 220 20% 10%; /* Very Dark Desaturated Blue */
+    --foreground: 0 0% 85%; /* Light Gray for text */
+    --card: 220 20% 13%; /* Darker Desaturated Blue */
+    --card-foreground: 0 0% 85%; /* Light Gray */
+    --popover: 220 20% 13%; 
+    --popover-foreground: 0 0% 85%; 
+    --primary: 260 75% 65%; /* Brighter Rich Purple */
+    --primary-foreground: 0 0% 100%; 
+    --secondary: 220 20% 18%; /* Slightly Lighter Dark Blue */
+    --secondary-foreground: 0 0% 75%; 
+    --muted: 220 20% 22%; /* Even Lighter Dark Blue for muted elements */
+    --muted-foreground: 0 0% 60%; 
+    --accent: 330 85% 70%; /* Brighter Vibrant Pink/Magenta */
+    --accent-foreground: 0 0% 100%; 
+    --destructive: 0 70% 60%; /* Slightly brighter Red for dark mode */
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 20% 25%; /* Dark Gray-Blue Border */
+    --input: 220 20% 30%; 
+    --ring: 260 75% 70%; /* Lighter Rich Purple for focus rings */
+    --chart-1: 260 75% 60%;
+    --chart-2: 330 80% 65%;
+    --chart-3: 210 75% 60%;
+    --chart-4: 30 85% 60%;
+    --chart-5: 120 55% 60%;
 
     /* Sidebar Dark Theme */
-    --sidebar-background: 216 100% 14%; /* Deep Blue */
-    --sidebar-foreground: 0 0% 82.7%; /* Light Gray */
-    --sidebar-primary: 265 79% 63%; /* Brighter Electric Purple */
-    --sidebar-primary-foreground: 0 0% 98%; /* White */
-    --sidebar-accent: 265 79% 53%; /* Electric Purple */
-    --sidebar-accent-foreground: 0 0% 98%; /* White */
-    --sidebar-border: 216 100% 22%; /* Slightly lighter Deep Blue for border - adjusted */
-    --sidebar-ring: 265 79% 63%; /* Brighter Electric Purple */
+    --sidebar-background: 220 20% 12%; /* Dark Desaturated Blue for sidebar */
+    --sidebar-foreground: 0 0% 85%; 
+    --sidebar-primary: 260 75% 65%; 
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 330 85% 70%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 20% 28%; 
+    --sidebar-ring: 260 75% 70%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border transition-colors duration-150 ease-in-out;
   }
   body {
     @apply bg-background text-foreground;
   }
   /* Apply subtle gradient to main content area */
   .sidebar-inset-content > div {
-    @apply bg-gradient-to-br from-background to-muted/30;
+    @apply bg-gradient-to-br from-background to-muted/20; /* Adjusted gradient intensity */
   }
   .dark .sidebar-inset-content > div {
-    @apply bg-gradient-to-br from-background to-muted/20;
+    @apply bg-gradient-to-br from-background to-muted/10; /* Adjusted gradient intensity for dark */
   }
 }
 
-/* Add subtle transition for color scheme changes */
-body, .bg-background, .text-foreground, .bg-card, .text-card-foreground, .border-border {
-  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+/* Enhanced transition for color scheme changes and interactive elements */
+body, .bg-background, .text-foreground, .bg-card, .text-card-foreground, .border-border,
+button, a, input, textarea, select {
+  transition-property: background-color, color, border-color, box-shadow, transform, opacity;
+  transition-duration: 0.2s; /* Slightly faster default transition */
+  transition-timing-function: ease-in-out;
 }
 
 /* Prose styles for markdown content */
 .prose {
-  @apply text-foreground max-w-full; /* Ensure prose takes full width available */
+  @apply text-foreground max-w-full; 
 }
 .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
-  @apply text-foreground font-semibold;
+  @apply text-foreground font-bold tracking-tight; /* Adjusted font-weight and tracking */
 }
 .prose p, .prose ul, .prose ol, .prose li {
-  @apply text-muted-foreground;
+  @apply text-muted-foreground leading-relaxed; /* Improved line height */
 }
 .prose a {
-  @apply text-accent hover:text-accent/80 transition-colors;
+  @apply text-accent hover:text-accent/80 font-medium transition-colors duration-150; /* Added font-medium */
 }
 .prose strong {
   @apply text-foreground font-semibold;
 }
 .prose blockquote {
-  @apply border-l-4 border-accent pl-4 italic text-muted-foreground;
+  @apply border-l-4 border-accent pl-4 italic text-muted-foreground bg-accent/5 py-2 rounded-r-md; /* Added bg and padding */
 }
 .prose code {
-  @apply bg-muted text-foreground rounded px-1.5 py-1 text-sm font-mono;
+  @apply bg-muted text-accent rounded px-1.5 py-1 text-sm font-mono shadow-sm; /* Changed text color to accent, added shadow */
 }
 .prose pre {
-  @apply bg-muted p-4 rounded-lg text-sm shadow-inner overflow-x-auto;
+  @apply bg-muted/70 p-4 rounded-lg text-sm shadow-inner overflow-x-auto; /* Darker pre background */
 }
 .prose pre code {
-  @apply bg-transparent p-0; /* Reset code style inside pre */
+  @apply bg-transparent p-0 shadow-none; /* Reset code style inside pre */
 }
 
 .dark .prose {
@@ -151,13 +155,13 @@ body, .bg-background, .text-foreground, .bg-card, .text-card-foreground, .border
   @apply text-foreground;
 }
 .dark .prose blockquote {
-  @apply border-accent text-muted-foreground;
+  @apply border-accent text-muted-foreground bg-accent/10; /* Adjusted for dark */
 }
 .dark .prose code {
-   @apply bg-muted text-foreground;
+   @apply bg-muted text-accent; /* Changed text color to accent */
 }
 .dark .prose pre {
-  @apply bg-muted;
+  @apply bg-muted/60; /* Darker pre background for dark mode */
 }
 .dark .prose pre code {
   @apply bg-transparent;
