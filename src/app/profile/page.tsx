@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -14,7 +14,8 @@ import { User, Mail, Edit3, Bell, Shield, Palette, Activity, Sun, Moon, Laptop, 
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link'; // Added import for Link
+import Link from 'next/link'; 
+import { Skeleton } from '@/components/ui/skeleton'; // Added for placeholder
 
 // Mock data - replace with actual data fetching
 const userProfile = {
@@ -52,13 +53,28 @@ export default function ProfilePage() {
   const [activityTracking, setActivityTracking] = useState(userProfile.preferences.privacy.activityTracking);
   const [dataSharing, setDataSharing] = useState(userProfile.preferences.privacy.dataSharing);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [mounted, setMounted] = useState(false); // Added mounted state
 
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
+  // Set mounted to true after component mounts
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const handleSave = () => {
     // Simulate API call to save profile
     console.log("Saving profile:", { name, bio, emailNotifications, appAlerts, activityTracking, dataSharing, theme });
+    userProfile.name = name;
+    userProfile.bio = bio;
+    userProfile.preferences.notifications.emailUpdates = emailNotifications;
+    userProfile.preferences.notifications.appAlerts = appAlerts;
+    userProfile.preferences.privacy.activityTracking = activityTracking;
+    userProfile.preferences.privacy.dataSharing = dataSharing;
+    if (mounted) { // theme might be undefined on server or initial client render
+       userProfile.preferences.theme = theme || 'system';
+    }
     setIsEditing(false);
     toast({
       title: "Profile Updated",
@@ -69,8 +85,12 @@ export default function ProfilePage() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
+  
+  let ThemeIconToRender = Laptop;
+  if (mounted) {
+    ThemeIconToRender = theme === 'light' ? Sun : theme === 'dark' ? Moon : Laptop;
+  }
 
-  const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Laptop;
 
   return (
     <div className="space-y-10 max-w-5xl mx-auto">
@@ -84,11 +104,11 @@ export default function ProfilePage() {
           <motion.div whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 300 }}>
             <Avatar className="w-24 h-24 border-4 border-primary shadow-lg">
               <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} data-ai-hint="user portrait" />
-              <AvatarFallback className="text-3xl">{userProfile.name.substring(0,2).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="text-3xl">{name.substring(0,2).toUpperCase()}</AvatarFallback>
             </Avatar>
           </motion.div>
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">{isEditing ? name : userProfile.name}</h1>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">{name}</h1>
             <p className="text-lg text-muted-foreground flex items-center gap-2">
               <Mail className="w-5 h-5 opacity-70" /> {userProfile.email}
             </p>
@@ -163,13 +183,23 @@ export default function ProfilePage() {
               <div className="space-y-3">
                   <h4 className="font-semibold text-lg flex items-center gap-2"><Palette className="w-5 h-5 text-accent" />Appearance</h4>
                   <div className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
-                    <Label htmlFor="theme-selector" className="text-md flex items-center gap-2"><ThemeIcon className="w-5 h-5" /> Current Theme</Label>
+                    <Label htmlFor="theme-selector" className="text-md flex items-center gap-2">
+                      {mounted ? <ThemeIconToRender className="w-5 h-5" /> : <Skeleton className="w-5 h-5 rounded-full" /> } Current Theme
+                    </Label>
                     <div className="flex gap-2">
-                      {(['light', 'dark', 'system'] as const).map((t) => (
-                        <Button key={t} variant={theme === t ? "default" : "outline"} size="sm" onClick={() => { setTheme(t); if(isEditing) userProfile.preferences.theme = t; }} disabled={!isEditing && theme === t}>
-                          {t.charAt(0).toUpperCase() + t.slice(1)}
-                        </Button>
-                      ))}
+                      {!mounted ? (
+                        <>
+                          <Skeleton className="h-8 w-16 rounded-md" />
+                          <Skeleton className="h-8 w-16 rounded-md" />
+                          <Skeleton className="h-8 w-16 rounded-md" />
+                        </>
+                      ) : (
+                        (['light', 'dark', 'system'] as const).map((t) => (
+                          <Button key={t} variant={theme === t ? "default" : "outline"} size="sm" onClick={() => { setTheme(t); if(isEditing) userProfile.preferences.theme = t; }} disabled={!isEditing && theme === t}>
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                          </Button>
+                        ))
+                      )}
                     </div>
                   </div>
               </div>

@@ -21,7 +21,7 @@ const inter = Inter({
 
 
 export const metadataObject: Metadata = {
-  title: 'NeuroVichar - Vichar Before Prahar',
+  title: 'NeuroVichar - Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with inteliigence',
   description: 'Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with inteliigence',
 };
 
@@ -37,7 +37,7 @@ export default function RootLayout({
     return (
       <html lang="en" suppressHydrationWarning>
         <head>
-          <title>{String(metadataObject.title)} - Authentication</title>
+          <title>{String(metadataObject.title)}</title> {/* Updated to use full title */}
           <meta name="description" content={String(metadataObject.description)} />
         </head>
         <body className={`${inter.variable} font-sans antialiased`}>
