@@ -118,9 +118,9 @@ Instructions:
 4.  **Synthesis**: Based on resultSummaries (including image analysis if any) and tool outputs, formulate a "synthesizedAnswer". This answer MUST reflect insights from both text prompt and image context if provided.
 5.  **Workflow Explanation**: Detail prompt breakdown, agent roles, tool contributions, AND HOW THE IMAGE (if provided) influenced the process and final answer.
 6.  **Workflow Diagram Data**:
-    *   Nodes: 'input' (mainPrompt), 'image_input' (if imageDataUri is present), 'process' (Neuro Synapse), 'agent' nodes for sub-tasks, 'tool' nodes (if used), 'output' (finalAnswer).
-    *   If 'imageDataUri' is present, add an 'image_input' node (e.g., { id: 'imageContext', label: 'Image Context', type: 'image_input' }) and connect it to 'neuroSynapse'.
-    *   Edges: Connect nodes logically (e.g., 'mainPrompt' & 'imageContext' (if present) to 'neuroSynapse', 'neuroSynapse' to agents/tools, agents/tools to 'neuroSynapse', 'neuroSynapse' to 'finalAnswer'). All edges animated.
+    *   Nodes: 'input' (mainPrompt), 'image_input' (if imageDataUri is present), 'process' (Neuro Synapse, ensure this node has id: "neuroSynapse"), 'agent' nodes for sub-tasks, 'tool' nodes (if used), 'output' (finalAnswer).
+    *   If 'imageDataUri' is present, add an 'image_input' node (e.g., { id: 'imageContext', label: 'Image Context', type: 'image_input' }) and connect it to the main 'neuroSynapse' process node.
+    *   Edges: Connect nodes logically (e.g., 'mainPrompt' & 'imageContext' (if present) to 'neuroSynapse', 'neuroSynapse' to agents/tools, agents/tools to 'neuroSynapse', 'neuroSynapse' to 'finalAnswer'). All edges animated. Each edge needs a unique id, e.g., "edge-1", "edge-2".
 7.  **Tool Usage Reporting**: If the getTopNewsHeadlines tool or any other tool is invoked, populate the toolUsages array in the output. Each entry should specify toolName, toolInput (what was passed to the tool), and toolOutput (what the tool returned).
 
 Output Format:
@@ -153,10 +153,39 @@ const neuroSynapseFlow = ai.defineFlow(
       throw new Error('Neuro Synapse failed to generate a response.');
     }
     
+    // Ensure the main process node has the ID "neuroSynapse"
+    const workflowData = llmResponse.output.workflowDiagramData;
+    if (workflowData && workflowData.nodes) {
+      const processNode = workflowData.nodes.find(node => node.type === 'process');
+      if (processNode && processNode.id !== 'neuroSynapse') {
+        // Attempt to correct if a process node exists with a different ID
+        // This is a fallback, the prompt should ideally enforce this.
+        const neuroSynapseNode = workflowData.nodes.find(node => node.id === 'neuroSynapse');
+        if(!neuroSynapseNode && processNode) {
+           // If no node with 'neuroSynapse' ID exists, rename the first 'process' node.
+           processNode.id = 'neuroSynapse';
+           // Update edges targeting the old processNode.id to 'neuroSynapse'
+           if (workflowData.edges) {
+             workflowData.edges.forEach(edge => {
+               if (edge.source === processNode.label || edge.target === processNode.label || edge.source === "Process" || edge.target === "Process") { // common LLM mistakes
+                 if (edge.source !== "input" && edge.source !== "imageContext" && edge.source !== "output" && !edge.source.startsWith("agent-") && !edge.source.startsWith("tool-") ) edge.source = 'neuroSynapse';
+                 if (edge.target !== "input" && edge.target !== "imageContext" && edge.target !== "output" && !edge.target.startsWith("agent-") && !edge.target.startsWith("tool-") ) edge.target = 'neuroSynapse';
+               }
+             });
+           }
+        }
+      } else if (!processNode) {
+        // If no process node, add one. This is less ideal.
+        workflowData.nodes.push({ id: 'neuroSynapse', label: 'Neuro Synapse Process', type: 'process' });
+      }
+    }
+
+
     return {
       ...llmResponse.output,
       originalPrompt: input.mainPrompt,
       hasImageContext: !!input.imageDataUri, // Explicitly set based on input
+      workflowDiagramData: workflowData, 
     };
   }
 );
