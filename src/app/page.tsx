@@ -2,7 +2,7 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"; 
-import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store, Sparkles, Rocket } from "lucide-react"; // Added Sparkles, Rocket
+import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store, Sparkles, Rocket } from "lucide-react";
 import Link from "next/link";
 import { motion } from 'framer-motion';
 
@@ -161,7 +161,7 @@ const AnimatedSectionTitle: React.FC<{ children: React.ReactNode, className?: st
 export default function DashboardPage() {
   const heroTitlePrefix = "Welcome to ";
   const heroTitleMain = "NeuroVichar";
-  const heroSubtitle = "An intelligent platform for collaborative AI-driven insights, pushing the boundaries of what's possible.";
+  const heroSubtitle = "Vichar Before Prahar";
 
   const titleVariants = {
     hidden: { opacity: 0 },

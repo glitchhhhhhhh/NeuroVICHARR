@@ -5,7 +5,7 @@ import { Inter } from 'next/font/google'; // Changed from Geist
 import './globals.css';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn } from 'lucide-react'; // Added Lightbulb, UserCircle, Store, LogIn
+import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
@@ -14,17 +14,15 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 
-const inter = Inter({ // Changed from geistSans
-  variable: '--font-sans', // Changed variable name
+const inter = Inter({ 
+  variable: '--font-sans', 
   subsets: ['latin'],
 });
 
-// Removed geistMono as Inter can be used for mono as well or a specific mono font can be added if needed
 
-// Metadata can remain static unless dynamic generation is required
 export const metadataObject: Metadata = {
-  title: 'NeuroVichar',
-  description: 'Intelligent Prompt Collaboration Platform',
+  title: 'NeuroVichar - Vichar Before Prahar',
+  description: 'Intelligent Prompt Collaboration Platform - Vichar Before Prahar',
 };
 
 export default function RootLayout({
@@ -33,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const isAuthPage = pathname === '/login' || pathname === '/signup'; // Example auth pages
+  const isAuthPage = pathname === '/login' || pathname === '/signup'; 
 
   if (isAuthPage) {
     return (
@@ -73,12 +71,11 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* It's generally better to set metadata in the Head component of individual pages or a specific _app.js/_document.js if needed dynamically */}
       <head>
         <title>{String(metadataObject.title)}</title>
         <meta name="description" content={String(metadataObject.description)} />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}> {/* Use font-sans which maps to --font-sans */}
+      <body className={`${inter.variable} font-sans antialiased`}> 
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -162,7 +159,7 @@ export default function RootLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenu className="mt-auto pt-4 border-t border-border/30"> {/* Section for non-AI features */}
+                  <SidebarMenu className="mt-auto pt-4 border-t border-border/30"> 
                     <SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2 pt-2">Platform Features</SidebarGroupLabel>
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild tooltip="Parallel Processing">
