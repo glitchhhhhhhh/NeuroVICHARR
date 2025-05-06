@@ -92,6 +92,13 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  /* Apply subtle gradient to main content area */
+  .sidebar-inset-content > div {
+    @apply bg-gradient-to-br from-background to-muted/30;
+  }
+  .dark .sidebar-inset-content > div {
+    @apply bg-gradient-to-br from-background to-muted/20;
+  }
 }
 
 /* Add subtle transition for color scheme changes */
@@ -101,25 +108,31 @@ body, .bg-background, .text-foreground, .bg-card, .text-card-foreground, .border
 
 /* Prose styles for markdown content */
 .prose {
-  @apply text-foreground;
+  @apply text-foreground max-w-full; /* Ensure prose takes full width available */
 }
 .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
-  @apply text-foreground;
+  @apply text-foreground font-semibold;
+}
+.prose p, .prose ul, .prose ol, .prose li {
+  @apply text-muted-foreground;
 }
 .prose a {
-  @apply text-accent hover:text-accent/80;
+  @apply text-accent hover:text-accent/80 transition-colors;
 }
 .prose strong {
-  @apply text-foreground;
+  @apply text-foreground font-semibold;
 }
 .prose blockquote {
-  @apply border-accent text-muted-foreground;
+  @apply border-l-4 border-accent pl-4 italic text-muted-foreground;
 }
 .prose code {
-  @apply bg-muted text-foreground rounded px-1 py-0.5 text-sm;
+  @apply bg-muted text-foreground rounded px-1.5 py-1 text-sm font-mono;
 }
 .prose pre {
-  @apply bg-muted p-4 rounded-md text-sm;
+  @apply bg-muted p-4 rounded-lg text-sm shadow-inner overflow-x-auto;
+}
+.prose pre code {
+  @apply bg-transparent p-0; /* Reset code style inside pre */
 }
 
 .dark .prose {
@@ -127,6 +140,9 @@ body, .bg-background, .text-foreground, .bg-card, .text-card-foreground, .border
 }
 .dark .prose h1, .dark .prose h2, .dark .prose h3, .dark .prose h4, .dark .prose h5, .dark .prose h6 {
   @apply text-foreground;
+}
+.dark .prose p, .dark .prose ul, .dark .prose ol, .dark .prose li {
+  @apply text-muted-foreground;
 }
 .dark .prose a {
   @apply text-accent hover:text-accent/80;
@@ -142,4 +158,7 @@ body, .bg-background, .text-foreground, .bg-card, .text-card-foreground, .border
 }
 .dark .prose pre {
   @apply bg-muted;
+}
+.dark .prose pre code {
+  @apply bg-transparent;
 }

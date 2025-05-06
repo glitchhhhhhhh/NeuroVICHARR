@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google'; // Changed from Geist
 import './globals.css';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe } from 'lucide-react';
+import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
@@ -76,6 +76,14 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="AI Image Generation">
+                      <Link href="/ai-image-generation">
+                        <ImageIcon />
+                        <span>AI Image Generation</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="Parallel Processing">
                       <Link href="/parallel-processing">
                         <Zap />
@@ -122,7 +130,7 @@ export default function RootLayout({
                 <UserNav />
               </SidebarFooter>
             </Sidebar>
-            <SidebarInset>
+            <SidebarInset className="sidebar-inset-content">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}
@@ -130,7 +138,7 @@ export default function RootLayout({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3, ease: "easeInOut" }}
-                  className="p-4 md:p-6 lg:p-8"
+                  className="p-4 md:p-6 lg:p-8 min-h-screen" // Added min-h-screen
                 >
                   {children}
                 </motion.div>
