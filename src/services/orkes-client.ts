@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview Mock Orkes Conductor Client.
  * In a real application, this would be replaced by the official Orkes Conductor SDK.
@@ -126,6 +125,19 @@ class OrkesConductorClient {
               { id: 'e5', source: 'result_synthesizer', target: 'finalOutput', animated: true },
             ],
           },
+          // From neuro-synapse-orkes-workflow.yaml for consistency in output structure
+          decomposedTasks: [
+            { id: "analyze_prompt_ref", taskDescription: "Analyze user prompt", assignedAgent: "AnalyzerAgent", status: "COMPLETED", resultSummary: "Prompt analysis complete."},
+            { id: "plan_execution_ref", taskDescription: "Plan execution strategy", assignedAgent: "PlannerAgent", status: "COMPLETED", resultSummary: "Execution plan generated."},
+            { id: "execute_code_gen_ref", taskDescription: "Execute: Code Generation", assignedAgent: "CodeGenerator", status: "COMPLETED", resultSummary: "Mock code generated."},
+            { id: "execute_image_gen_ref", taskDescription: "Execute: Image Generation", assignedAgent: "ImageGenerator", status: "COMPLETED", resultSummary: "Mock image data URI."},
+            { id: "execute_eval_ref", taskDescription: "Execute: Evaluation", assignedAgent: "Evaluator", status: "COMPLETED", resultSummary: "Evaluation complete."},
+            { id: "ethical_check_ref", taskDescription: "Ethical Compliance Check", assignedAgent: "EthicalCheckerAgent", status: "COMPLETED", resultSummary: "Compliance: true. Issues: None"},
+            { id: "synthesize_final_result_ref", taskDescription: "Synthesize Final Result", assignedAgent: "ResultSynthesizerAgent", status: "COMPLETED", resultSummary: "Final answer compiled."}
+          ],
+          workflowExplanation: "Orkes workflow executed: User input analyzed, plan formed, tasks (code, image, eval) forked & joined, ethical check passed, final result synthesized.",
+          toolUsages: [], // Assuming no tools used in this mock completion
+          ethicalComplianceDetails: { isCompliant: true, issuesFound: [] },
         };
          console.log(`[Mock Orkes Client] Workflow ${workflowId} COMPLETED.`);
       } else if (workflow.status === 'RUNNING') {
