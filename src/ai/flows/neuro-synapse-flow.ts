@@ -1,159 +1,175 @@
 'use server';
 /**
- * @fileOverview Neuro Synapse AI flow using Orkes Conductor for orchestration.
- * It starts an Orkes workflow which calls various AI agent microservices.
+ * @fileOverview Neuro Synapse AI flow for complex prompt processing.
+ * It analyzes, plans, simulates execution, performs an ethical check, and synthesizes results.
  *
- * - neuroSynapse - A function that orchestrates the Neuro Synapse process via Orkes.
+ * - neuroSynapse - A function that orchestrates the Neuro Synapse process.
  * - NeuroSynapseInput - The input type for the neuroSynapse function.
  * - NeuroSynapseOutput - The return type for the neuroSynapse function.
  */
 
+import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { getOrkesClient } from '@/services/orkes-client'; // Mock Orkes client
 
-// Define a schema for individual sub-tasks (consistent with existing UI if possible)
+// Define a schema for individual sub-tasks
 const SubTaskSchema = z.object({
-  id: z.string().describe('A unique identifier for the sub-task (e.g., Orkes task ID or ref name).'),
+  id: z.string().describe('A unique identifier for the sub-task (e.g., task-1).'),
   taskDescription: z.string().describe('A clear, concise description of the sub-task.'),
-  assignedAgent: z.string().describe('The type of virtual agent or Orkes task name.'),
-  status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'TIMED_OUT', 'CANCELLED']).describe('The current status of the sub-task.'),
-  resultSummary: z.string().optional().nullable().describe('A brief summary of the sub-task\'s outcome if completed.'),
+  assignedAgent: z.string().describe('The type of virtual agent assigned to this sub-task (e.g., "DataAnalyst", "CreativeWriter").'),
+  status: z.enum(['PLANNED', 'SIMULATED_COMPLETE', 'SIMULATED_FAILED', 'ETHICAL_REVIEW_PENDING']).describe('The current status of the sub-task in the simulation.'),
+  resultSummary: z.string().optional().nullable().describe('A brief summary of the sub-task\'s simulated outcome if completed.'),
 });
 export type SubTask = z.infer<typeof SubTaskSchema>;
 
-const ToolUsageSchema = z.object({ // Keep if agents might still report tool usage
-  toolName: z.string().describe('The name of the tool used.'),
-  toolInput: z.any().optional().describe('The input provided to the tool.'),
-  toolOutput: z.any().optional().describe('The output received from the tool.'),
+const ToolUsageSchema = z.object({
+  toolName: z.string().describe('The name of the tool used (simulated).'),
+  toolInput: z.any().optional().describe('The input provided to the tool (simulated).'),
+  toolOutput: z.any().optional().describe('The output received from the tool (simulated).'),
 });
 export type ToolUsage = z.infer<typeof ToolUsageSchema>;
 
-const NeuroSynapseInputSchema = z.object({
+const EthicalComplianceSchema = z.object({
+  isCompliant: z.boolean().describe('Whether the overall output is ethically compliant.'),
+  issuesFound: z.array(z.string()).optional().describe('A list of ethical issues identified, if any.'),
+  confidenceScore: z.number().min(0).max(1).optional().describe('Confidence in the ethical assessment.'),
+  remediationSuggestions: z.array(z.string()).optional().describe('Suggestions for remediating ethical issues.'),
+});
+
+export const NeuroSynapseInputSchema = z.object({
   mainPrompt: z.string().describe('The complex user prompt to be processed by Neuro Synapse.'),
   imageDataUri: z.string().optional().describe("Optional image data for context, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
 });
 export type NeuroSynapseInput = z.infer<typeof NeuroSynapseInputSchema>;
 
-// This output schema should align with what the ResultSynthesizer agent (and Orkes workflow) produces.
-const NeuroSynapseOutputSchema = z.object({
+export const NeuroSynapseOutputSchema = z.object({
   originalPrompt: z.string().describe('The original prompt received from the user.'),
   hasImageContext: z.boolean().describe('Whether image context was provided and considered.'),
-  decomposedTasks: z.array(SubTaskSchema).describe('An array of sub-tasks representing Orkes tasks and their status/results.'),
+  decomposedTasks: z.array(SubTaskSchema).describe('An array of sub-tasks as planned and simulated by the AI.'),
   synthesizedAnswer: z.string().describe('The final, synthesized answer compiled from the results of all sub-tasks.'),
-  workflowExplanation: z.string().describe('An explanation of how the prompt was decomposed and processed by the Orkes workflow.'),
+  workflowExplanation: z.string().describe('An explanation of how the prompt was decomposed, processed, and results synthesized by the AI.'),
   workflowDiagramData: z.object({
     nodes: z.array(z.object({ id: z.string(), label: z.string(), type: z.enum(['input', 'image_input', 'process', 'output', 'agent', 'tool']) })),
     edges: z.array(z.object({ id: z.string(), source: z.string(), target: z.string(), animated: z.boolean().optional() })),
-  }).describe('Data structured for rendering a visual workflow diagram, reflecting Orkes execution.'),
-  toolUsages: z.array(ToolUsageSchema).optional().describe('Information about any tools used by agents during the workflow.'),
-  orkesWorkflowId: z.string().optional().describe('The ID of the Orkes workflow execution.'),
-  ethicalComplianceDetails: z.any().optional().describe('Details from the ethical compliance check.'),
+  }).describe('Data structured for rendering a visual workflow diagram, reflecting the AI\'s simulated process.'),
+  toolUsages: z.array(ToolUsageSchema).optional().describe('Information about any tools (simulated) used by agents during the process.'),
+  ethicalCompliance: EthicalComplianceSchema.describe('Details from the ethical compliance check performed by the AI.'),
 });
 export type NeuroSynapseOutput = z.infer<typeof NeuroSynapseOutputSchema>;
 
-
 export async function neuroSynapse(input: NeuroSynapseInput): Promise<NeuroSynapseOutput> {
-  const orkesClient = getOrkesClient();
-  const ngrokBaseUrl = process.env.NGROK_BASE_URL;
+  return neuroSynapseFlow(input);
+}
 
-  if (!ngrokBaseUrl) {
-    throw new Error("NGROK_BASE_URL environment variable is not set. Orkes workflow requires this to call back to local agent services.");
-  }
-  
-  const workflowName = "neuro_synapse_workflow_v1"; // Matches YAML
-  const workflowInput = {
-    prompt: input.mainPrompt,
-    imageDataUri: input.imageDataUri,
-    ngrokBaseUrl: ngrokBaseUrl, // Pass ngrok URL to the workflow
-  };
+const prompt = ai.definePrompt({
+  name: 'neuroSynapseOrchestratorPrompt',
+  input: { schema: NeuroSynapseInputSchema },
+  output: { schema: NeuroSynapseOutputSchema },
+  prompt: `You are Neuro Synapse, an advanced AI orchestrator. Your task is to process a complex user prompt, potentially with image context, by performing the following steps:
 
-  try {
-    console.log(`Starting Orkes workflow '${workflowName}' with input:`, workflowInput);
-    const { workflowId } = await orkesClient.workflowResource.startWorkflow({
-      name: workflowName,
-      input: workflowInput,
-      // version: 1 // Optional, if you have multiple versions
-    });
-    console.log(`Orkes workflow started with ID: ${workflowId}`);
+1.  **Analyze Input**:
+    *   Understand the core request in '{{{mainPrompt}}}'.
+    *   Identify key entities, intents, and desired outcomes.
+    *   If '{{#if imageDataUri}}imageDataUri is provided{{else}}no image data is provided{{/if}}', note whether image analysis is relevant. If an image is provided, incorporate its content into your analysis. Image: {{#if imageDataUri}}{{media url=imageDataUri}}{{else}}None{{/if}}.
 
-    // Poll for completion (in a real app, use webhooks or a more robust polling strategy)
-    let workflowExecution;
-    const maxAttempts = 20; // ~100 seconds with 5s interval
-    let attempts = 0;
+2.  **Decompose and Plan (Sub-Tasks)**:
+    *   Break down the main prompt into 3-5 logical sub-tasks.
+    *   For each sub-task:
+        *   Assign a unique ID (e.g., "task-1", "task-2").
+        *   Write a clear 'taskDescription'.
+        *   Assign a descriptive virtual 'assignedAgent' type (e.g., "KnowledgeResearcher", "CodeGenerator", "ImageAnalyst", "CreativeSynthesizer", "EthicalReviewer").
+        *   Set initial 'status' to "PLANNED".
 
-    while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-      workflowExecution = await orkesClient.workflowResource.getWorkflow(workflowId, true); // true to include tasks
-      console.log(`Polling Orkes workflow ${workflowId}, Status: ${workflowExecution.status}`);
+3.  **Simulate Execution**:
+    *   For each PLANNED sub-task:
+        *   Generate a plausible, concise 'resultSummary' as if the assigned virtual agent completed it. This summary should be a few sentences.
+        *   If the task involves simulated tool usage (e.g., a "WebSearcher" agent using a "searchEngine" tool), describe this in 'toolUsages' with 'toolName', 'toolInput' (simulated query), and 'toolOutput' (simulated search results summary).
+        *   Update its 'status' to "SIMULATED_COMPLETE". If simulation is not feasible for a task, mark it "SIMULATED_FAILED" and explain why in the resultSummary.
 
-      if (['COMPLETED', 'FAILED', 'TIMED_OUT', 'TERMINATED'].includes(workflowExecution.status || '')) {
-        break;
+4.  **Perform Ethical Compliance Check**:
+    *   Review the original prompt, your plan, and all simulated results.
+    *   Determine if the overall process and potential output are ethically compliant ('isCompliant': true/false).
+    *   List any 'issuesFound'.
+    *   Provide a 'confidenceScore' (0.0-1.0) for your ethical assessment.
+    *   Suggest 'remediationSuggestions' if non-compliant.
+
+5.  **Synthesize Final Answer**:
+    *   Based on all simulated sub-task results and the ethical check:
+        *   If ethically compliant and all critical tasks succeeded: Craft a comprehensive 'synthesizedAnswer' addressing the original prompt.
+        *   If not compliant or critical tasks failed: The 'synthesizedAnswer' should state this, explain the issues, and include remediation suggestions.
+
+6.  **Explain Workflow**:
+    *   Provide a 'workflowExplanation' detailing your analysis, planning, simulation steps (including how image context was used, if any), the ethical review, and how the final answer was synthesized.
+
+7.  **Generate Workflow Diagram Data**:
+    *   Create 'workflowDiagramData' with 'nodes' and 'edges' to visually represent your process:
+        *   Nodes: Include 'input' (for mainPrompt), 'image_input' (if imageDataUri provided), one 'process' node for Neuro Synapse itself, 'agent' nodes for each virtual agent type you assigned, 'tool' nodes if any tools were simulated, and an 'output' node for the final answer.
+        *   Edges: Connect nodes logically to show data flow (e.g., input -> Neuro Synapse -> agent-1 -> Neuro Synapse -> output). Ensure all edges have an 'id' and 'animated: true'.
+
+Output MUST be a single JSON object matching the NeuroSynapseOutputSchema.
+
+User Prompt: {{{mainPrompt}}}
+{{#if imageDataUri}}Image Provided: Yes (content is embedded above for your analysis).{{else}}Image Provided: No.{{/if}}
+
+Begin Orchestration.
+`,
+});
+
+
+const neuroSynapseFlow = ai.defineFlow(
+  {
+    name: 'neuroSynapseFlow',
+    inputSchema: NeuroSynapseInputSchema,
+    outputSchema: NeuroSynapseOutputSchema,
+  },
+  async (input: NeuroSynapseInput) => {
+    try {
+      console.log("[Neuro Synapse Flow] Received input:", input.mainPrompt, "Image provided:", !!input.imageDataUri);
+      const llmResponse = await prompt(input);
+
+      if (!llmResponse.output) {
+        console.error("[Neuro Synapse Flow] LLM failed to generate a structured response.");
+        throw new Error('Neuro Synapse AI failed to generate a response.');
       }
-      attempts++;
-    }
-
-    if (!workflowExecution || !['COMPLETED', 'FAILED', 'TIMED_OUT', 'TERMINATED'].includes(workflowExecution.status || '')) {
-      throw new Error(`Orkes workflow ${workflowId} did not complete in the expected time. Last status: ${workflowExecution?.status}`);
-    }
-
-    if (workflowExecution.status !== 'COMPLETED' || !workflowExecution.output) {
-        console.error("Orkes workflow execution failed or has no output:", workflowExecution);
-      throw new Error(`Orkes workflow ${workflowId} did not complete successfully. Status: ${workflowExecution.status}. Output: ${JSON.stringify(workflowExecution.output)}`);
-    }
-    
-    console.log("Orkes workflow completed. Output:", workflowExecution.output);
-
-    // Transform Orkes workflow output to NeuroSynapseOutputSchema
-    // The ResultSynthesizer agent's output should ideally match this structure.
-    // If not, this is where you'd map it.
-    const outputData = workflowExecution.output;
-    
-    // Validate the outputData against NeuroSynapseOutputSchema
-    const validatedOutput = NeuroSynapseOutputSchema.safeParse({
+      
+      console.log("[Neuro Synapse Flow] LLM Output received, validating...");
+      // Ensure originalPrompt and hasImageContext are correctly set from the input
+      const validatedOutput = NeuroSynapseOutputSchema.parse({
+        ...llmResponse.output,
         originalPrompt: input.mainPrompt,
         hasImageContext: !!input.imageDataUri,
-        // Ensure all fields are mapped correctly from outputData or provide defaults
-        decomposedTasks: (outputData.decomposedTasks || []).map((task: any) => ({
-            ...task,
-            resultSummary: task.resultSummary === null ? undefined : task.resultSummary, // Handle null explicitly
-        })),
-        synthesizedAnswer: outputData.finalAnswer || "No synthesized answer from workflow.",
-        workflowExplanation: outputData.workflowExplanation || "Workflow executed by Orkes Conductor.",
-        workflowDiagramData: outputData.workflowDiagramData || { nodes: [], edges: [] }, 
-        toolUsages: outputData.toolUsages || [],
-        orkesWorkflowId: workflowId,
-        ethicalComplianceDetails: outputData.ethicalComplianceDetails,
-    });
+      });
+      console.log("[Neuro Synapse Flow] Output validated successfully.");
+      return validatedOutput;
 
-    if (!validatedOutput.success) {
-        console.error("Orkes workflow output validation failed:", validatedOutput.error.issues);
-        throw new Error(`Orkes workflow completed but output validation failed: ${validatedOutput.error.message}`);
+    } catch (error: any) {
+      console.error("Error in neuroSynapseFlow:", error.message);
+      if (error instanceof z.ZodError) {
+          console.error("Zod validation errors:", error.errors);
+      }
+      // Return a structured error that the UI can attempt to handle
+      return {
+        originalPrompt: input.mainPrompt,
+        hasImageContext: !!input.imageDataUri,
+        decomposedTasks: [{
+          id: "error_task",
+          taskDescription: "Neuro Synapse process encountered an critical error.",
+          assignedAgent: "SystemOrchestrator",
+          status: "SIMULATED_FAILED",
+          resultSummary: error.message || "Unknown error during processing.",
+        }],
+        synthesizedAnswer: `Neuro Synapse process failed: ${error.message || "Unknown error. Please check logs."}`,
+        workflowExplanation: `An error occurred within the Neuro Synapse AI orchestrator. Details: ${error.message}`,
+        workflowDiagramData: {
+          nodes: [{ id: 'error', label: 'Processing Error', type: 'output' }],
+          edges: [],
+        },
+        toolUsages: [],
+        ethicalCompliance: {
+            isCompliant: false,
+            issuesFound: ["System error prevented full ethical assessment.", error.message],
+            confidenceScore: 0.1,
+        }
+      };
     }
-
-    return validatedOutput.data;
-
-  } catch (error: any) {
-    console.error("Error in neuroSynapse (Orkes) flow:", error);
-    // Return a structured error that the UI can handle
-    return {
-      originalPrompt: input.mainPrompt,
-      hasImageContext: !!input.imageDataUri,
-      decomposedTasks: [{
-        id: "error_task",
-        taskDescription: "Workflow orchestration failed.",
-        assignedAgent: "System",
-        status: "FAILED",
-        resultSummary: error.message,
-      }],
-      synthesizedAnswer: `Neuro Synapse (Orkes) process failed: ${error.message}`,
-      workflowExplanation: `An error occurred while trying to execute the Orkes workflow. ${error.message}`,
-      workflowDiagramData: {
-        nodes: [{ id: 'error', label: 'Error Occurred', type: 'output' }],
-        edges: [],
-      },
-      toolUsages: [],
-      orkesWorkflowId: undefined,
-      ethicalComplianceDetails: { error: error.message },
-    };
   }
-}
+);
