@@ -3,7 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
-import { OrkesConductorClient, type OrkesConductorClientConfig, type TaskDef, type WorkflowDef } from '@conductorcam/conductor-javascript';
+import { OrkesConductorClient, type OrkesConductorClientConfig, type TaskDef, type WorkflowDef } from '@orkes-org/conductor-javascript';
 
 // Ensure environment variables are loaded (especially for script execution)
 import dotenv from 'dotenv';
@@ -88,4 +88,3 @@ async function registerDefinitions() {
 }
 
 registerDefinitions();
-

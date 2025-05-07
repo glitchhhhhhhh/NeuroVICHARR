@@ -1,11 +1,25 @@
-
 # src/workflows/neuro_synapse_workflow_v1.yaml
 name: "neuro_synapse_workflow_v1"
-description: "Orchestrates AI agents to process complex prompts for NeuroVichar."
+description: "Orchestrates AI agents to process complex prompts for NeuroVichar, considering user context."
 version: 1
 ownerEmail: "dev@neurovichar.ai"
 restartable: true
 workflowStatusListenerEnabled: true
+
+# Input parameters for the workflow
+inputParameters:
+  - name: "mainPrompt"
+    description: "The primary complex prompt from the user."
+    type: "string"
+  - name: "imageDataUri"
+    description: "Optional base64 encoded image data URI."
+    type: "string"
+    optional: true
+  - name: "userContext"
+    description: "Optional user activity context for personalization."
+    type: "object" # JSON object for user context
+    optional: true
+
 
 tasks:
   - name: "analyze_prompt_task"
@@ -13,14 +27,15 @@ tasks:
     type: "HTTP"
     inputParameters:
       http_request:
-        uri: "${env.NGROK_BASE_URL}/api/agents/analyzer" # Exposed local endpoint
+        uri: "${env.NGROK_BASE_URL}/api/agents/analyzer" 
         method: "POST"
         contentType: "application/json"
-        body: "${workflow.input}" # Pass the entire workflow input to the analyzer
+        # Pass the entire workflow input, which now includes mainPrompt, imageDataUri, and userContext
+        body: "${workflow.input}" 
     retryCount: 2
     retryLogic: "FIXED"
     retryDelaySeconds: 10
-    timeoutSeconds: 120 # 2 minutes
+    timeoutSeconds: 120 
 
   - name: "plan_execution_task"
     taskReferenceName: "plan_execution_ref"
@@ -31,24 +46,22 @@ tasks:
         method: "POST"
         contentType: "application/json"
         body:
-          input: "${analyze_prompt_ref.output}" # Output from analyzer is input to planner
+          # The planner now receives the full output from the analyzer,
+          # which includes deconstructedSubTasks, analysisSummary, originalPrompt, hasImageContext, and userContextProvided.
+          input: "${analyze_prompt_ref.output}" 
     retryCount: 2
     retryLogic: "FIXED"
     retryDelaySeconds: 5
     timeoutSeconds: 60
 
-  # This DECISION task can determine if parallel execution is needed or if a simpler path can be taken
   - name: "decide_execution_path_task"
     taskReferenceName: "decide_execution_path_ref"
     type: "DECISION"
     inputParameters:
-      # We need a way for the planner to indicate if a fork is needed.
-      # Let's assume planner.output.executionPlan is an array and its length determines fork.
-      # Or planner.output.requiresFork (boolean)
       planned_task_count: "${plan_execution_ref.output.executionPlan.length}"
     caseValueParam: "planned_task_count"
     decisionCases:
-      "0": # No tasks planned by planner, perhaps a direct synthesis or fallback
+      "0": 
         - name: "ethical_check_direct_synthesis_task"
           taskReferenceName: "ethical_check_direct_synthesis_ref"
           type: "HTTP"
@@ -65,8 +78,9 @@ tasks:
                     planSummary: "No complex execution path planned."
                   originalPrompt: "${workflow.input.mainPrompt}"
                   currentStage: "direct_synthesis_review"
-          # ... retries, timeout
-        - name: "synthesize_direct_result_task" # Simplified synthesizer for no-fork case
+          retryCount: 1
+          timeoutSeconds: 60
+        - name: "synthesize_direct_result_task" 
           taskReferenceName: "synthesize_direct_result_ref"
           type: "HTTP"
           inputParameters:
@@ -77,25 +91,22 @@ tasks:
               body:
                 input:
                   originalPrompt: "${workflow.input.mainPrompt}"
-                  hasImageContext: "${workflow.input.hasImageContext}"
+                  hasImageContext: "${analyze_prompt_ref.output.hasImageContext}" # Use determined value from analyzer
+                  userContext: "${workflow.input.userContext}" # Pass original user context
                   analysisSummary: "${analyze_prompt_ref.output.analysisSummary}"
                   planSummary: "No complex execution path planned; direct synthesis."
-                  executorOutputs: [] # No forked executors
+                  executorOutputs: [] 
                   ethicalCheckResult: "${ethical_check_direct_synthesis_ref.output}"
-          # ... retries, timeout
-    defaultCase: # One or more tasks planned, proceed to fork
+                  deconstructedSubTasks: "${analyze_prompt_ref.output.deconstructedSubTasks}" # Pass this for diagram generation
+          retryCount: 1
+          timeoutSeconds: 180
+    defaultCase: 
         - name: "fork_join_executors_task"
           taskReferenceName: "fork_join_executors_ref"
-          type: "FORK_JOIN_DYNAMIC" # Dynamic fork based on planner's output
+          type: "FORK_JOIN_DYNAMIC" 
           inputParameters:
-            dynamicForkTasksParam: "dynamic_tasks_input" # Parameter name that holds the list of tasks to fork
-            dynamicForkTasksInput: "${plan_execution_ref.output.executionPlan}" # Array of task defs from planner
-          # Each item in plan_execution_ref.output.executionPlan should be an object:
-          # { name: "task_def_name", taskReferenceName: "unique_ref", input: { ...task_input... } }
-          # e.g., [{ name: "execute_code_generation_task", taskReferenceName: "code_gen_1", input: { "promptFragment": "..." } }]
-
-        # JOIN task is implicit in FORK_JOIN_DYNAMIC. Output of fork_join_executors_ref will be a map:
-        # { "unique_ref1": {output...}, "unique_ref2": {output...} }
+            dynamicForkTasksParam: "dynamic_tasks_input" 
+            dynamicForkTasksInput: "${plan_execution_ref.output.executionPlan}" 
 
         - name: "ethical_check_intermediate_results_task"
           taskReferenceName: "ethical_check_intermediate_ref"
@@ -107,7 +118,7 @@ tasks:
               contentType: "application/json"
               body:
                 input:
-                  contentToReview: "${fork_join_executors_ref.output}" # Review all executor outputs
+                  contentToReview: "${fork_join_executors_ref.output}" 
                   originalPrompt: "${workflow.input.mainPrompt}"
                   currentStage: "pre_synthesis_review"
           retryCount: 1
@@ -124,42 +135,40 @@ tasks:
               body:
                 input:
                   originalPrompt: "${workflow.input.mainPrompt}"
-                  hasImageContext: "${workflow.input.hasImageContext}"
+                  hasImageContext: "${analyze_prompt_ref.output.hasImageContext}" # Use determined value
+                  userContext: "${workflow.input.userContext}" # Pass original user context
                   analysisSummary: "${analyze_prompt_ref.output.analysisSummary}"
                   planSummary: "${plan_execution_ref.output.planSummary}"
-                  # Convert map from FORK_JOIN_DYNAMIC to an array for the synthesizer
                   executorOutputs: "${jsonUtils.toJsonPath(fork_join_executors_ref.output, '$.*')}"
                   ethicalCheckResult: "${ethical_check_intermediate_ref.output}"
+                  deconstructedSubTasks: "${analyze_prompt_ref.output.deconstructedSubTasks}" # Pass this for diagram generation
+                  # plannedTasks: "${plan_execution_ref.output.executionPlan}" # Could also pass this if needed
           retryCount: 1
-          timeoutSeconds: 180 # 3 minutes for synthesis
+          timeoutSeconds: 240 # Increased timeout for complex synthesis
 
-# Output parameters define what the workflow returns upon completion
 outputParameters:
-  # Depending on the DECISION path, one of these will be populated
-  finalAnswer: "${synthesize_final_result_ref.output}" # If defaultCase was taken
-  directAnswer: "${synthesize_direct_result_ref.output}" # If case "0" was taken
-  # Add a way to know which path was taken or consolidate output structure
-  workflowPathTaken: "${decide_execution_path_ref.output.caseOutput}" # Or a custom output from decision
-  overallEthicalCompliance: > # Consolidate ethical output
+  finalAnswer: "${synthesize_final_result_ref.output}" 
+  directAnswer: "${synthesize_direct_result_ref.output}" 
+  workflowPathTaken: "${decide_execution_path_ref.output.caseOutput}" 
+  overallEthicalCompliance: > 
     ${if (decide_execution_path_ref.output.caseOutput == '0') then ethical_check_direct_synthesis_ref.output else ethical_check_intermediate_ref.output endif}
 
-# Define task definitions that are referenced by 'name' in the FORK_JOIN_DYNAMIC input
-# These are templates. The actual taskReferenceName and input are provided by the planner.
+
 taskDefinitions:
-  - name: "execute_web_search_task" # Should match 'name' in planner output
+  - name: "execute_web_search_task" 
     retryCount: 2
     timeoutSeconds: 120
-    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext"]
+    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext", "userContext"] # Add userContext if agents might use it
     outputKeys: ["searchResults", "summary", "status", "error"]
-    http_request: # This part is for Orkes UI to know it's an HTTP task if registered globally
+    http_request: 
         uri: "${env.NGROK_BASE_URL}/api/agents/executor-web-search"
         method: "POST"
         contentType: "application/json"
 
   - name: "execute_image_generation_task"
-    retryCount: 1 # Image gen can be slow/costly
-    timeoutSeconds: 300 # 5 minutes
-    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext"]
+    retryCount: 1 
+    timeoutSeconds: 300 
+    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext", "userContext"]
     outputKeys: ["imageDataUri", "imageUrl", "altText", "status", "error"]
     http_request:
         uri: "${env.NGROK_BASE_URL}/api/agents/executor-image"
@@ -169,7 +178,7 @@ taskDefinitions:
   - name: "execute_code_generation_task"
     retryCount: 2
     timeoutSeconds: 180
-    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext"]
+    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext", "userContext"]
     outputKeys: ["generatedCode", "language", "executionLog", "status", "error"]
     http_request:
         uri: "${env.NGROK_BASE_URL}/api/agents/executor-code"
@@ -179,14 +188,10 @@ taskDefinitions:
   - name: "execute_text_synthesis_task"
     retryCount: 2
     timeoutSeconds: 120
-    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext", "contextData"]
+    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext", "contextData", "userContext"]
     outputKeys: ["synthesizedText", "status", "error"]
     http_request:
         uri: "${env.NGROK_BASE_URL}/api/agents/executor-text"
         method: "POST"
         contentType: "application/json"
-  # Note: The HTTP tasks directly in the main flow (analyzer, planner, ethical-checker, result-synthesizer)
-  # already have their HTTP config. These taskDefinitions are specifically for tasks
-  # that will be dynamically invoked by FORK_JOIN_DYNAMIC.
-  # Orkes needs to know their basic structure (input/output keys) if they aren't pre-registered.
-  # Alternatively, pre-register all task definitions via API using orkesClient.metadataResource.registerTaskDefs().
+

@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Neuro Synapse AI flow for complex prompt processing.
@@ -10,8 +9,8 @@
  */
 
 import { z } from 'genkit';
-import { getOrkesClient } from '@/services/orkes-client'; // Orkes client
-import type { Workflow, Task } from "@conductorcam/conductor-javascript"; 
+import { getOrkesClient } from '@/services/orkes-client'; 
+import type { Workflow, Task } from "@orkes-org/conductor-javascript"; 
 
 // Define a schema for individual sub-tasks (reflects potential output from agents)
 const SubTaskSchema = z.object({
@@ -47,6 +46,7 @@ const NeuroSynapseInputSchema = z.object({
       recentSearches: z.array(z.string()).optional(),
       visitedPages: z.array(z.string()).optional(),
       currentFocus: z.string().optional(),
+      preferredTone: z.enum(['formal', 'casual', 'technical']).optional(),
   }).optional().describe("User's recent activity for 'Magic Mode' or prompt suggestions."),
 });
 export type NeuroSynapseInput = z.infer<typeof NeuroSynapseInputSchema>;
@@ -83,16 +83,17 @@ function transformOrkesTaskToSubTask(orkesTask: Task): SubTask {
           resultSummary = orkesTask.outputData.substring(0, 150) + (orkesTask.outputData.length > 150 ? "..." : "");
       } else if (typeof orkesTask.outputData === 'object' && orkesTask.outputData !== null) {
           const outputData = orkesTask.outputData as Record<string, any>;
-          const summaryFields = ['summary', 'synthesizedText', 'generatedCode', 'imageUrl', 'message', 'error'];
+          // Prefer specific summary fields from agent outputs
+          const summaryFields = ['summary', 'synthesizedText', 'generatedCode', 'imageUrl', 'message', 'error', 'status', 'altText', 'planSummary', 'analysisSummary'];
           let foundSummary = false;
           for (const field of summaryFields) {
-              if (typeof outputData[field] === 'string' && outputData[field].length > 0) {
+              if (outputData[field] && typeof outputData[field] === 'string' && outputData[field].length > 0) {
                   resultSummary = outputData[field].substring(0, 150) + (outputData[field].length > 150 ? "..." : "");
                   foundSummary = true;
                   break;
               }
           }
-          if (!foundSummary) {
+          if (!foundSummary) { // Fallback to stringifying the output if no specific summary field found
              const stringifiedOutput = JSON.stringify(orkesTask.outputData);
              resultSummary = stringifiedOutput.substring(0, 150) + (stringifiedOutput.length > 150 ? "..." : "");
           }
@@ -103,7 +104,7 @@ function transformOrkesTaskToSubTask(orkesTask: Task): SubTask {
       resultSummary = `Task Incomplete: ${orkesTask.reasonForIncompletion.substring(0,150)}...`;
   }
 
-  if (resultSummary.trim() === "") {
+  if (resultSummary.trim() === "" || resultSummary === "{}") { // Handle empty or minimal JSON string
     resultSummary = "Task completed without a textual summary.";
   }
 
@@ -112,7 +113,7 @@ function transformOrkesTaskToSubTask(orkesTask: Task): SubTask {
     id: orkesTask.taskReferenceName || orkesTask.taskId || `unknown_task_${Date.now()}`,
     taskDescription: defaultTaskDescription,
     assignedAgent: orkesTask.taskDefName || "Unknown Agent", 
-    status: (orkesTask.status as SubTask['status']) || "UNKNOWN",
+    status: (orkesTask.status?.toUpperCase() as SubTask['status']) || "UNKNOWN", // Ensure status matches enum
     resultSummary: resultSummary,
     outputData: orkesTask.outputData,
   };
@@ -120,8 +121,10 @@ function transformOrkesTaskToSubTask(orkesTask: Task): SubTask {
 
 
 export async function neuroSynapse(input: NeuroSynapseInput): Promise<NeuroSynapseOutput> {
-  console.log("[Neuro Synapse Flow] Received input:", input.mainPrompt, "Image provided:", !!input.imageDataUri);
+  console.log("[Neuro Synapse Flow] Received input:", input.mainPrompt, "Image provided:", !!input.imageDataUri, "User context:", input.userContext ? "Provided" : "Not provided");
   const orkesClient = getOrkesClient();
+  console.log("[Neuro Synapse Flow] Orkes client obtained:", orkesClient ? 'Real/Mock Client' : 'null');
+
   let workflowId: string | undefined = undefined;
 
   try {
@@ -139,22 +142,15 @@ export async function neuroSynapse(input: NeuroSynapseInput): Promise<NeuroSynap
         input: workflowInput,
     });
 
-    if (typeof startResponse === 'string') { // Orkes client may return just the ID string
+    if (typeof startResponse === 'string') { 
         workflowId = startResponse;
     } else if (typeof startResponse === 'object' && startResponse !== null && 'workflowId' in startResponse && typeof (startResponse as any).workflowId === 'string') {
         workflowId = (startResponse as { workflowId: string }).workflowId;
+    } else if (typeof startResponse === 'object' && startResponse !== null && 'executionId' in startResponse && typeof (startResponse as any).executionId === 'string') {
+        workflowId = (startResponse as { executionId: string }).executionId;
     } else {
-        // Attempt to handle if full Workflow object with executionId is returned by startWorkflow
-        // This depends on the Orkes client version and specific method behavior.
-        // Conductor-javascript startWorkflow typically returns just the workflowId string.
-        // If startWorkflow is typed to return Promise<WorkflowExecutionResponse> which might be { executionId: string }
-        // Then use executionId
-        if (typeof startResponse === 'object' && startResponse !== null && 'executionId' in startResponse && typeof (startResponse as any).executionId === 'string') {
-            workflowId = (startResponse as { executionId: string }).executionId;
-        } else {
-            console.error("[Neuro Synapse Flow] Unexpected start workflow response structure:", startResponse);
-            throw new Error("Failed to start Orkes workflow: Unexpected response format. Expected string workflowId or object with workflowId/executionId.");
-        }
+        console.error("[Neuro Synapse Flow] Unexpected start workflow response structure:", startResponse);
+        throw new Error("Failed to start Orkes workflow: Unexpected response format. Expected string workflowId or object with workflowId/executionId.");
     }
     
     if (!workflowId) {
@@ -203,20 +199,21 @@ export async function neuroSynapse(input: NeuroSynapseInput): Promise<NeuroSynap
         throw new Error(`Orkes workflow ${workflowId} ended with status ${workflowExecution.status}. Reason: ${workflowExecution.reasonForIncompletion || 'Not specified.'}`);
     }
 
-    const finalOutputData = workflowExecution.output || {};
-    
-    // The workflow YAML defines outputParameters like `finalAnswer` or `directAnswer`
-    // These keys will contain the output of the synthesizer agent.
-    const resultKey = finalOutputData.finalAnswer ? 'finalAnswer' : finalOutputData.directAnswer ? 'directAnswer' : null;
-    
-    let synthesizedAgentOutput: Partial<NeuroSynapseOutput> = {};
-    if (resultKey && typeof finalOutputData[resultKey] === 'object' && finalOutputData[resultKey] !== null) {
-        synthesizedAgentOutput = finalOutputData[resultKey];
-    } else if (Object.keys(finalOutputData).length > 0 && !resultKey) {
-        // If no specific key, but output has data, assume the raw output is the synthesizer's output
-        console.warn("[Neuro Synapse Flow] Workflow output structure might not match expected 'finalAnswer' or 'directAnswer'. Using raw workflow output for synthesized data.");
-        synthesizedAgentOutput = finalOutputData as Partial<NeuroSynapseOutput>;
+    // The ResultSynthesizer agent is expected to return a structure that mostly matches NeuroSynapseOutputSchema
+    // The Orkes workflow output is the output of its last task (ResultSynthesizer)
+    const workflowOutputFromSynthesizer = workflowExecution.output || {};
+    let finalAgentOutput: Partial<NeuroSynapseOutput> = {};
+
+    // Orkes often wraps the last task's output. Check for common patterns.
+    if (workflowOutputFromSynthesizer.finalAnswer) {
+        finalAgentOutput = workflowOutputFromSynthesizer.finalAnswer;
+    } else if (workflowOutputFromSynthesizer.directAnswer) { // From decision path
+        finalAgentOutput = workflowOutputFromSynthesizer.directAnswer;
+    } else if (Object.keys(workflowOutputFromSynthesizer).length > 0) {
+        console.warn("[Neuro Synapse Flow] Workflow output structure might not match expected 'finalAnswer' or 'directAnswer'. Using raw workflow output for synthesized data.", workflowOutputFromSynthesizer);
+        finalAgentOutput = workflowOutputFromSynthesizer as Partial<NeuroSynapseOutput>;
     }
+
 
     const defaultEthicalCompliance: EthicalCompliance = {
       isCompliant: false,
@@ -225,24 +222,32 @@ export async function neuroSynapse(input: NeuroSynapseInput): Promise<NeuroSynap
       remediationSuggestions: []
     };
     
-    const ethicalComplianceData = synthesizedAgentOutput.ethicalCompliance || finalOutputData.overallEthicalCompliance || defaultEthicalCompliance;
+    const ethicalComplianceData = finalAgentOutput.ethicalCompliance || workflowOutputFromSynthesizer.overallEthicalCompliance || defaultEthicalCompliance;
+
+    const agentActivityLog: string[] = (workflowExecution.tasks || [])
+        .map(t => `Task ${t.taskReferenceName || t.workflowTask?.name || t.taskId} (${t.taskDefName || t.taskType || 'N/A'}) status: ${t.status || 'N/A'}${t.reasonForIncompletion ? `. Reason: ${t.reasonForIncompletion.substring(0,100)}...` : ''}`);
+    
+    // If ResultSynthesizer provided its own agentActivityLog, prefer that, otherwise use the one derived from Orkes tasks
+    const finalAgentActivityLog = finalAgentOutput.agentActivityLog && finalAgentOutput.agentActivityLog.length > 0 
+                                    ? finalAgentOutput.agentActivityLog 
+                                    : agentActivityLog;
 
 
     const output: NeuroSynapseOutput = {
-      originalPrompt: input.mainPrompt,
-      hasImageContext: !!input.imageDataUri,
+      originalPrompt: finalAgentOutput.originalPrompt || input.mainPrompt,
+      hasImageContext: typeof finalAgentOutput.hasImageContext === 'boolean' ? finalAgentOutput.hasImageContext : !!input.imageDataUri,
       orkesWorkflowId: workflowId,
       orkesWorkflowStatus: workflowExecution.status || "UNKNOWN",
-      decomposedTasks: workflowExecution.tasks?.map(transformOrkesTaskToSubTask) || [],
-      synthesizedAnswer: synthesizedAgentOutput.synthesizedAnswer || "Orkes workflow completed, but the final synthesized answer is missing or in an unexpected format. Please check Orkes execution logs.",
-      workflowExplanation: synthesizedAgentOutput.workflowExplanation || "Workflow explanation not provided by the synthesizer agent.",
-      workflowDiagramData: synthesizedAgentOutput.workflowDiagramData || { 
+      decomposedTasks: (workflowExecution.tasks || []).map(transformOrkesTaskToSubTask), // Use raw tasks from Orkes for this
+      synthesizedAnswer: finalAgentOutput.synthesizedAnswer || "Orkes workflow completed, but the final synthesized answer is missing or in an unexpected format. Please check Orkes execution logs.",
+      workflowExplanation: finalAgentOutput.workflowExplanation || "Workflow explanation not provided by the synthesizer agent.",
+      workflowDiagramData: finalAgentOutput.workflowDiagramData || { 
           nodes: [{ id: 'default_node', label: 'Workflow Diagram Unavailable', type: 'process' as const }],
           edges: [] 
       },
-      toolUsages: synthesizedAgentOutput.toolUsages || [],
+      toolUsages: finalAgentOutput.toolUsages || [],
       ethicalCompliance: ethicalComplianceData,
-      agentActivityLog: workflowExecution.tasks?.map(t => `Task ${t.taskReferenceName || t.workflowTask?.name || t.taskId} (${t.taskDefName || t.taskType || 'N/A'}) status: ${t.status || 'N/A'}`),
+      agentActivityLog: finalAgentActivityLog,
     };
     
     console.log("[Neuro Synapse Flow] Orchestration successful. Final Output Preview:", JSON.stringify(output, null, 2).substring(0,500) + "...");
@@ -262,11 +267,11 @@ export async function neuroSynapse(input: NeuroSynapseInput): Promise<NeuroSynap
         if (error.response.data.message) errorMessage += ` - Orkes: ${error.response.data.message}`;
     } else if (error.body) { 
         try {
-            const errorBody = typeof error.body === 'string' ? error.body : await error.text(); 
-            console.error("[Neuro Synapse Flow] Orkes API Error Body:", errorBody);
-            errorMessage += ` - Orkes Body: ${errorBody.substring(0,100)}...`;
+            const errorBodyText = typeof error.body === 'string' ? error.body : await (error as any).text(); 
+            console.error("[Neuro Synapse Flow] Orkes API Error Body:", errorBodyText);
+            errorMessage += ` - Orkes Body: ${errorBodyText.substring(0,100)}...`;
         } catch (parseError) {
-            console.error("[Neuro Synapse Flow] Orkes API Error (unparseable body):", errorMessage);
+            console.error("[Neuro Synapse Flow] Orkes API Error (unparseable body):", errorMessage); // Log original error message
         }
     }
     

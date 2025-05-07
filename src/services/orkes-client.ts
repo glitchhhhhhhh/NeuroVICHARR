@@ -1,5 +1,5 @@
 
-import { OrkesConductorClient, type OrkesConductorClientConfig, type TaskDef, type WorkflowDef } from "@conductorcam/conductor-javascript";
+import { OrkesConductorClient, type OrkesConductorClientConfig, type TaskDef, type WorkflowDef } from "@orkes-org/conductor-javascript";
 
 // Ensure environment variables are loaded
 import dotenv from 'dotenv';
@@ -22,7 +22,7 @@ class MockOrkesConductorClient {
 
   public get workflowResource() {
     return {
-      startWorkflow: async (params: { name: string; input: any; version?: number }): Promise<string> => { // Changed to return string directly
+      startWorkflow: async (params: { name: string; input: any; version?: number }): Promise<string> => { 
         console.log(`[MockOrkes] Starting workflow: ${params.name}`, params.input);
         this.workflowCounter++;
         const workflowId = `mock_wf_${Date.now()}_${this.workflowCounter}`;
@@ -42,7 +42,7 @@ class MockOrkesConductorClient {
           reasonForIncompletion: null,
         });
         
-        // Simulate async processing
+        
         setTimeout(() => {
           const wf = this.mockWorkflows.get(workflowId);
           if (wf && wf.status === "RUNNING") {
@@ -56,13 +56,12 @@ class MockOrkesConductorClient {
                 { id: "mock_synthesizer_task", taskDescription: "Synthesize results", assignedAgent: "ResultSynthesizer", status: "COMPLETED", resultSummary: "Final answer synthesized.", outputData: {} , taskReferenceName: "mock_synthesizer_task", taskDefName: "ResultSynthesizer", workflowTask: {name: "Synthesize results"}}
             );
 
-            // Simulate output based on input (very simplified) for NeuroSynapseOutputSchema
+            
             const synthesizedAnswerDetails = { 
                 originalPrompt: params.input?.mainPrompt || 'N/A',
                 hasImageContext: !!params.input?.imageDataUri,
                 synthesizedAnswer: `Mock synthesized answer for prompt: '${params.input?.mainPrompt || 'Not provided.'}' The process involved analyzing the prompt, creating a plan, executing sub-tasks (like text generation), performing an ethical review, and finally combining all results.`,
                 workflowExplanation: "Mock Workflow Explanation: The user's prompt was first analyzed to understand its core components. A plan was then formulated to address these components using specialized agents. For instance, a text generation agent might have been invoked. All outputs were then reviewed for ethical compliance before being synthesized into this final response. The workflow diagram visually represents this orchestrated process.",
-                // Decomposed tasks are already in wf.tasks, they will be transformed by neuro-synapse-flow
                 toolUsages: [{ toolName: "MockSearchTool", toolInput: { query: "example" }, toolOutput: { results: ["Mock result 1"] } }],
                 ethicalCompliance: { isCompliant: true, issuesFound: [], confidenceScore: 0.95, remediationSuggestions: [] },
                 workflowDiagramData: {
@@ -85,28 +84,26 @@ class MockOrkesConductorClient {
                     ]
                 }
             };
-             // Set the output for the synthesizer task, which becomes the workflow output
+            
             wf.tasks.find((t:any) => t.id === "mock_synthesizer_task")!.outputData = synthesizedAnswerDetails;
 
-            // Orkes workflow output is typically the output of the last task or explicitly defined outputParameters.
-            // We'll simulate the workflow definition where the synthesizer's output is mapped to 'finalAnswer'.
             wf.output = { 
                 finalAnswer: synthesizedAnswerDetails
             };
             console.log(`[MockOrkes] Workflow ${workflowId} COMPLETED (simulated).`);
           }
-        }, 2000 + Math.random() * 1500); // Simulate 2-3.5 seconds processing
-        return workflowId; // Return only the ID as string
+        }, 2000 + Math.random() * 1500); 
+        return workflowId; 
       },
-      getWorkflow: async (workflowId: string, includeTasks: boolean = false): Promise<Workflow> => {
+      getWorkflow: async (workflowId: string, includeTasks: boolean = false): Promise<Workflow> => { 
         console.log(`[MockOrkes] Getting workflow: ${workflowId}, Include Tasks: ${includeTasks}`);
         const wfData = this.mockWorkflows.get(workflowId);
         if (!wfData) {
           const error: any = new Error(`Mock workflow ${workflowId} not found.`);
-          error.response = { status: 404, data: `Workflow with id ${workflowId} not found.` }; // Simulate Orkes client error structure
+          error.response = { status: 404, data: `Workflow with id ${workflowId} not found.` }; 
           throw error;
         }
-        // Simulate task progression if still "RUNNING" after a short delay
+        
         if (wfData.status === "RUNNING" && (Date.now() - wfData.startTime > 1000)) {
            if (wfData.tasks.length === 1 && wfData.tasks[0].id === "mock_analyzer_task") {
                wfData.tasks[0].status = "COMPLETED";
@@ -115,16 +112,15 @@ class MockOrkesConductorClient {
            }
         }
         
-        const workflowInstance: Workflow = {
+        const workflowInstance: Workflow = { 
             workflowId: wfData.workflowId,
             status: wfData.status,
-            input: wfData.input,
-            workflowName: wfData.name,
-            tasks: includeTasks ? wfData.tasks : [], // Ensure tasks match Orkes Task type if possible
-            output: wfData.output,
+            input: wfData.input, 
+            workflowName: wfData.name, 
+            tasks: includeTasks ? wfData.tasks : [],
+            output: wfData.output, 
             startTime: new Date(wfData.startTime).toISOString(),
             reasonForIncompletion: wfData.reasonForIncompletion,
-            // Add other fields if NeuroSynapse flow depends on them, e.g. version, variables
         };
         return workflowInstance;
       },
@@ -143,8 +139,6 @@ class MockOrkesConductorClient {
       },
       getWorkflowDef: async (name: string, version?: number): Promise<WorkflowDef | undefined> => {
         console.log(`[MockOrkes] Getting workflow definition: ${name}`);
-        // This is a simplified mock; in reality, workflow defs are stored separately.
-        // We'll return a generic structure if a workflow with this name was "started".
         const foundWf = Array.from(this.mockWorkflows.values()).find(wf => wf.name === name);
         if (foundWf) {
             return { name: foundWf.name, version: version || 1, tasks: [], ownerEmail: 'mock@example.com' };
@@ -162,16 +156,18 @@ class MockOrkesConductorClient {
 
 export function getOrkesClient(): OrkesConductorClient | MockOrkesConductorClient {
   const useMock = process.env.USE_MOCK_ORKES_CLIENT === 'true';
+  console.log("[OrkesClient] USE_MOCK_ORKES_CLIENT:", useMock, "(type:", typeof useMock, ")");
+
 
   if (useMock) {
     if (!orkesClientInstance || !(orkesClientInstance instanceof MockOrkesConductorClient)) {
-      console.warn("USE_MOCK_ORKES_CLIENT is true. Using MOCK Orkes Client. No real Orkes calls will be made.");
+      console.warn("[OrkesClient] Initializing MOCK Orkes Client. No real Orkes calls will be made.");
       orkesClientInstance = new MockOrkesConductorClient();
     }
     return orkesClientInstance;
   }
 
-  // If not using mock, or if instance is mock and shouldn't be, re-initialize
+  
   if (!orkesClientInstance || (orkesClientInstance instanceof MockOrkesConductorClient && !useMock) ) {
     const serverUrl = process.env.ORKES_SERVER_URL;
     const keyId = process.env.ORKES_KEY_ID;
@@ -179,10 +175,13 @@ export function getOrkesClient(): OrkesConductorClient | MockOrkesConductorClien
 
     if (!serverUrl || !keyId || !keySecret) {
       console.error(
-        "ORKES_SERVER_URL, ORKES_KEY_ID, or ORKES_KEY_SECRET environment variables are not set for REAL Orkes client. Falling back to MOCK."
+        "[OrkesClient] ORKES_SERVER_URL, ORKES_KEY_ID, or ORKES_KEY_SECRET environment variables are not set for REAL Orkes client. CRITICAL ERROR."
       );
-      console.warn("Using MOCK Orkes Client due to missing credentials for real instance. No real Orkes calls will be made.");
-      orkesClientInstance = new MockOrkesConductorClient(); // Fallback explicitly
+      // In a production scenario, you might throw an error here or handle it more gracefully.
+      // For this project, falling back to mock if credentials are not perfectly set might hide configuration issues.
+      // However, to prevent complete app breakage if someone forgets to set USE_MOCK_ORKES_CLIENT to true but also lacks creds:
+      console.warn("[OrkesClient] CRITICAL: Real Orkes client cannot be initialized. Falling back to MOCK to prevent crash. Ensure .env is correct and USE_MOCK_ORKES_CLIENT is false for real Orkes integration.");
+      orkesClientInstance = new MockOrkesConductorClient(); 
       return orkesClientInstance;
     }
     
@@ -192,32 +191,30 @@ export function getOrkesClient(): OrkesConductorClient | MockOrkesConductorClien
         keyId: keyId,
         keySecret: keySecret,
       });
-      console.log("Real OrkesConductorClient initialized successfully.");
+      console.log("[OrkesClient] Real OrkesConductorClient initialized successfully.");
     } catch (error) {
-        console.error("Failed to initialize REAL OrkesConductorClient:", error);
-        console.warn("Falling back to MOCK Orkes Client due to initialization error.");
-        orkesClientInstance = new MockOrkesConductorClient(); // Fallback on error too
+        console.error("[OrkesClient] Failed to initialize REAL OrkesConductorClient:", error);
+        console.warn("[OrkesClient] Falling back to MOCK Orkes Client due to REAL client initialization error.");
+        orkesClientInstance = new MockOrkesConductorClient(); 
     }
   }
-  return orkesClientInstance;
+  return orkesClientInstance!; 
 }
 
-
 export async function registerNeuroVicharWorkflowWithOrkes(workflowDef: WorkflowDef, taskDefs: TaskDef[]) {
-  const client = getOrkesClient(); // This will get mock or real based on env
+  const client = getOrkesClient(); 
   try {
-    // In mock client, these just log. In real client, they make API calls.
     await client.metadataResource.updateWorkflowDefs([workflowDef]); 
     if (taskDefs && taskDefs.length > 0) {
         await client.metadataResource.registerTaskDefs(taskDefs); 
     }
     
     if (client instanceof MockOrkesConductorClient) {
-        console.log("[MockOrkes] NeuroVichar workflow and tasks (mock) registration functions called.");
+        console.log("[OrkesClient] NeuroVichar workflow and tasks (mock) registration functions called.");
     } else {
-        console.log("NeuroVichar workflow and tasks registration attempted with Orkes Cloud.");
+        console.log("[OrkesClient] NeuroVichar workflow and tasks registration attempted with Orkes Cloud.");
     }
   } catch (error) {
-    console.error("Error during 'registerNeuroVicharWorkflowWithOrkes':", error);
+    console.error("[OrkesClient] Error during 'registerNeuroVicharWorkflowWithOrkes':", error);
   }
 }

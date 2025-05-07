@@ -1,27 +1,38 @@
-
 // src/app/api/agents/planner/route.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import type { UserContext } from '@/ai/flows/interpret-user-intent-flow';
 
 interface PlannerInput {
   deconstructedSubTasks: Array<{ id: string; description: string; agent: string }>;
   analysisSummary: string;
   originalPrompt: string;
   hasImageContext: boolean;
+  userContext?: UserContext; // Expect userContext from Analyzer output
+  userContextProvided?: boolean; // Flag from analyzer
 }
 
 // Simulate planning logic
 function createExecutionPlan(analyzerOutput: PlannerInput): any {
   let planDetails = `Execution plan based on: "${analyzerOutput.analysisSummary}". `;
+  if (analyzerOutput.userContextProvided) {
+    planDetails += `User context was considered during planning. `;
+  }
   
-  // For FORK_JOIN, Orkes expects an array of task inputs for parallel branches.
-  // Each element in this array corresponds to one branch of the fork.
   const parallelTasksToExecute: any[] = [];
 
   analyzerOutput.deconstructedSubTasks.forEach(subTask => {
-    // Map agent type from analyzer to a specific task name in Orkes workflow
     let taskReferenceName;
-    let taskInput = { promptFragment: subTask.description, originalPrompt: analyzerOutput.originalPrompt, hasImageContext: analyzerOutput.hasImageContext };
+    let taskInput: any = { 
+        promptFragment: subTask.description, 
+        originalPrompt: analyzerOutput.originalPrompt, 
+        hasImageContext: analyzerOutput.hasImageContext 
+    };
+    // Pass userContext to executor tasks if it was provided to the planner
+    if (analyzerOutput.userContext) {
+        taskInput.userContext = analyzerOutput.userContext;
+    }
+
 
     switch (subTask.agent) {
       case "ExecutorWebSearch":
@@ -33,57 +44,63 @@ function createExecutionPlan(analyzerOutput: PlannerInput): any {
       case "ExecutorCode":
         taskReferenceName = "execute_code_generation_task";
         break;
-      case "ExecutorText": // A generic text processing/synthesis agent
+      case "ExecutorText": 
         taskReferenceName = "execute_text_synthesis_task";
-         taskInput = { ...taskInput, contextData: "General context from planner." }; // Example additional input
+         taskInput = { ...taskInput, contextData: "General context from planner." }; 
         break;
       default:
-        console.warn(`[PlannerAgent] Unknown agent type: ${subTask.agent} for task ${subTask.id}. Skipping.`);
-        return; // Skip this subTask if agent mapping is unclear
+        console.warn(`[PlannerAgent] Unknown agent type: ${subTask.agent} for task ${subTask.id}. Defaulting to text synthesis.`);
+        taskReferenceName = "execute_text_synthesis_task"; // Fallback
+        taskInput.promptFragment = `Address this with general text synthesis: ${subTask.description}`;
+        break; 
     }
     
     parallelTasksToExecute.push({
-        name: taskReferenceName, // This is the taskDefinition name in Orkes
-        taskReferenceName: `${subTask.id}_${taskReferenceName}`, // Unique reference for this instance in the workflow
+        name: taskReferenceName, 
+        taskReferenceName: `${subTask.id}_${taskReferenceName}_${Date.now()%10000}`, // Ensure more unique taskRefName
         input: taskInput
     });
-    planDetails += `Scheduled ${subTask.agent} for: "${subTask.description}". `;
+    planDetails += `Scheduled ${subTask.agent} (as ${taskReferenceName}) for: "${subTask.description}". `;
   });
   
   if (parallelTasksToExecute.length === 0) {
-    planDetails += "No executable tasks planned based on analyzer output. Consider a fallback or default action.";
+    planDetails += "No specific executor tasks planned based on analyzer output. The ResultSynthesizer will attempt a direct response.";
+    // It might be useful to still provide a default task for the synthesizer to work with
+    // or ensure the synthesizer can handle an empty executionPlan.
+    // For now, an empty executionPlan means the '0' case in the DECISION task will be taken.
   } else {
      planDetails += `Total ${parallelTasksToExecute.length} executor tasks scheduled for parallel execution.`;
   }
 
   return {
-    executionPlan: parallelTasksToExecute, // This will be used by FORK_JOIN_DYNAMIC task
+    executionPlan: parallelTasksToExecute, 
     planSummary: planDetails,
-    originalPrompt: analyzerOutput.originalPrompt,
-    hasImageContext: analyzerOutput.hasImageContext,
+    originalPrompt: analyzerOutput.originalPrompt, // Pass through for synthesizer
+    hasImageContext: analyzerOutput.hasImageContext, // Pass through
+    userContext: analyzerOutput.userContext, // Pass through user context
+    analysisSummary: analyzerOutput.analysisSummary, // Pass through for synthesizer
+    deconstructedSubTasks: analyzerOutput.deconstructedSubTasks, // Pass through for synthesizer diagram
   };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    // Orkes worker input can be complex. Often, the direct output of the previous task is available.
-    // Assuming 'analyzer_output' is the output variable name from the Analyzer task in Orkes.
-    const analyzerOutput: PlannerInput = body.input;
+    const analyzerOutput: PlannerInput = body.input || body;
 
-    if (!analyzerOutput || !analyzerOutput.deconstructedSubTasks) {
+    if (!analyzerOutput || !analyzerOutput.deconstructedSubTasks || !analyzerOutput.originalPrompt) {
       return NextResponse.json({ error: "Missing or invalid analyzer_output in request body" }, { status: 400 });
     }
     
-    console.log("[PlannerAgent] Received analyzer output:", JSON.stringify(analyzerOutput, null, 2));
+    console.log("[PlannerAgent] Received analyzer output:", JSON.stringify(analyzerOutput).substring(0, 300) + "...");
     
     // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
 
     const plan = createExecutionPlan(analyzerOutput);
     
-    console.log("[PlannerAgent] Plan created:", JSON.stringify(plan, null, 2));
-    return NextResponse.json({ ...plan });
+    console.log("[PlannerAgent] Plan created. Summary:", plan.planSummary);
+    return NextResponse.json(plan); // Return the whole plan object as Orkes task output
 
   } catch (error: any) {
     console.error("[PlannerAgent] Error:", error);

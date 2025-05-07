@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, type FormEvent, useEffect, useMemo, ChangeEvent } from 'react';
@@ -6,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, Zap, Loader2, Workflow, MessageSquare, Activity, CheckCircle2, AlertCircle, Newspaper, Wrench, Lightbulb, Users, ThermometerSnowflake, ImageUp, Image as ImageIcon, Share2, SearchCode, SlidersHorizontal, BrainCircuit, TimerOff, XCircle, ShieldCheck, Wand2 } from "lucide-react";
+import { Brain, Zap, Loader2, Workflow, MessageSquare, Activity, CheckCircle2, AlertCircle, Newspaper, Wrench, Lightbulb, Users, ThermometerSnowflake, ImageUp, Image as ImageIcon, Share2, SearchCode, SlidersHorizontal, BrainCircuit, TimerOff, XCircle, ShieldCheck, Wand2, FileText } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { neuroSynapse, type NeuroSynapseOutput, type SubTask as NeuroSubTask } from '@/ai/flows/neuro-synapse-flow'; 
-import { interpretUserIntent, type InterpretUserIntentOutput, type UserContext as NeuralInterfaceUserContext } from '@/ai/flows/interpret-user-intent-flow';
+import { neuroSynapse, type NeuroSynapseOutput, type SubTask as NeuroSubTask, type ToolUsage as NeuroToolUsage, type EthicalCompliance as NeuroEthicalCompliance } from '@/ai/flows/neuro-synapse-flow'; 
+import { interpretUserIntent, type UserContext as NeuralInterfaceUserContext } from '@/ai/flows/interpret-user-intent-flow';
 
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +22,8 @@ import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 
 type PageSubTask = NeuroSubTask;
+type PageToolUsage = NeuroToolUsage;
+type PageEthicalCompliance = NeuroEthicalCompliance;
 
 
 const NodeIcon: React.FC<{ type: NeuroSynapseOutput['workflowDiagramData']['nodes'][0]['type'], className?: string }> = ({ type, className = "w-6 h-6" }) => {
@@ -127,6 +128,7 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
             }
             queue = nextQueue;
             if (levels[level].length === 0 && queue.length > 0 ) { 
+                // Handle potential cycles or disconnected components by picking an unvisited node from queue
                 const nextNode = queue.shift();
                 if (nextNode && !visitedInLevelCalc.has(nextNode)) {
                     levels[level].push(nextNode);
@@ -135,11 +137,12 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
                  }
             }
             level++;
-             if(level > data.nodes.length * 2) break; 
+             if(level > data.nodes.length * 2) break; // Safety break for complex graphs or cycles
         }
+         // Assign level to any remaining nodes (e.g. part of a cycle not caught by initial queue)
          data.nodes.forEach(node => { 
             if (G[node.id].level === undefined) {
-                G[node.id].level = level -1; 
+                G[node.id].level = level -1; // Place at last known level
                 if(!levels[level-1]) levels[level-1] = [];
                 if(!levels[level-1].includes(node.id)) levels[level-1].push(node.id);
             }
@@ -153,20 +156,24 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
         let maxNodesInLevel = 0;
         levels.forEach(nodesInLevel => { maxNodesInLevel = Math.max(maxNodesInLevel, nodesInLevel.length); });
         
+        // Calculate diagram height dynamically based on the max number of nodes in any single column (level)
         const diagramHeight = maxNodesInLevel * (nodeHeight + verticalGap) - verticalGap + 2 * diagramPadding;
 
         levels.forEach((nodesInLevel, lvlIdx) => {
             const levelNodeCount = nodesInLevel.length;
             nodesInLevel.forEach((nodeId, nodeIdx) => {
                 const posX = diagramPadding + lvlIdx * (nodeWidth + horizontalGap);
+                // Distribute nodes vertically within their level, centering the column of nodes
                 const levelHeightForNodes = (levelNodeCount * (nodeHeight + verticalGap) - verticalGap);
-                const startY = (diagramHeight - levelHeightForNodes) / 2; 
+                const startY = (diagramHeight - levelHeightForNodes) / 2; // Center nodes vertically
                 const posY = diagramPadding + startY + nodeIdx * (nodeHeight + verticalGap);
                 positions[nodeId] = { x: posX, y: posY };
             });
         });
+         // Fallback for any nodes missed by leveling (should ideally not happen with good graph data)
          data.nodes.forEach(node => { 
             if (!positions[node.id]) {
+                // Place unpositioned nodes somewhere to avoid errors, though layout might be imperfect
                 positions[node.id] = { x: Math.random() * 600 + 50, y: Math.random() * 400 + 50 };
             }
         });
@@ -187,8 +194,8 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
   const allY = Object.values(nodePositions).map(p => p.y);
   const minX = Math.min(0, ...allX);
   const minY = Math.min(0, ...allY);
-  const maxX = Math.max(800, ...allX) + 160 + 50; 
-  const maxY = Math.max(600, ...allY) + 112 + 50; 
+  const maxX = Math.max(800, ...allX) + 160 + 50; // Add node width and padding
+  const maxY = Math.max(600, ...allY) + 112 + 50; // Add node height and padding
 
 
   return (
@@ -215,10 +222,11 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
           })}
         </g>
       </svg>
+      {/* Render nodes on top of SVG to allow HTML/CSS styling and interactivity */}
       <div className="nodes absolute top-0 left-0">
         {data.nodes.map(node => {
             const pos = nodePositions[node.id];
-            if (!pos) return null;
+            if (!pos) return null; // Should not happen if nodePositions is correctly populated
             return <WorkflowDiagramNode key={node.id} node={node} style={{ left: pos.x, top: pos.y }} />;
         })}
       </div>
@@ -245,6 +253,7 @@ const SubTaskCard: React.FC<{ task: PageSubTask, index: number }> = ({ task, ind
     case 'CANCELLED': 
     case 'CANCELED':
     case 'TERMINATED':
+    case 'COMPLETED_WITH_ERRORS':
       IconComponent = AlertCircle;
       statusColorClass = 'border-red-500 dark:border-red-400';
       statusTextColor = 'text-red-600 dark:text-red-300';
@@ -312,7 +321,7 @@ const SubTaskCard: React.FC<{ task: PageSubTask, index: number }> = ({ task, ind
   );
 };
 
-const ToolUsageDisplay: React.FC<{ toolUsage: NeuroSynapseOutput['toolUsages'][0], index: number }> = ({ toolUsage, index }) => {
+const ToolUsageDisplay: React.FC<{ toolUsage: PageToolUsage, index: number }> = ({ toolUsage, index }) => {
   if (!toolUsage) return null;
   return (
     <motion.div
@@ -350,6 +359,18 @@ const ToolUsageDisplay: React.FC<{ toolUsage: NeuroSynapseOutput['toolUsages'][0
   );
 };
 
+const AgentActivityLogDisplay: React.FC<{ log: string, index: number }> = ({ log, index }) => (
+  <motion.li
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ delay: index * 0.05, duration: 0.3, ease: "easeOut" }}
+    className="text-sm text-muted-foreground py-1.5 px-2.5 border-l-2 border-primary/40 bg-primary/5 rounded-r-md"
+  >
+    <span className="font-mono text-xs text-primary/70 mr-1.5">{`[${index+1}]`}</span> {log}
+  </motion.li>
+);
+
+
 export default function NeuroSynapsePage() {
   const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState('');
@@ -362,13 +383,10 @@ export default function NeuroSynapsePage() {
   const { toast } = useToast();
 
   const [isMagicMode, setIsMagicMode] = useState(false);
-  const [userActivityContext, setUserActivityContext] = useState<NeuralInterfaceUserContext | undefined>(undefined);
+  const [userActivityContext, setUserActivityContext] = useState<NeuralInterfaceUserContext | undefined>(undefined); // Example context
 
   useEffect(() => {
-    // Polyfill for ResizeObserver for framer-motion or other libraries if needed
     if (typeof window !== 'undefined' && typeof window.ResizeObserver === 'undefined') {
-      // A very simple no-op polyfill to prevent crashes. 
-      // For full functionality, a more robust polyfill might be needed.
       (window as any).ResizeObserver = class ResizeObserver {
         observe() {}
         unobserve() {}
@@ -380,12 +398,15 @@ export default function NeuroSynapsePage() {
     if (queryPrompt) {
       setPrompt(queryPrompt);
     } else {
-      setPrompt("Develop a comprehensive marketing strategy for launching a new eco-friendly coffee brand, targeting millennial and Gen Z consumers. Include online and offline tactics, and suggest 3 key performance indicators.");
+      // Default prompt for showcase
+      setPrompt("Develop a comprehensive marketing strategy for launching a new eco-friendly coffee brand, targeting millennial and Gen Z consumers. Include online and offline tactics, and suggest 3 key performance indicators. Consider potential ethical challenges.");
     }
+    // Initialize with some mock user activity context for Magic Mode demo
     setUserActivityContext({
-        recentSearches: ["sustainable brands", "coffee market trends", "gen z marketing"],
-        visitedPages: ["/idea-catalyst", "/ai-image-generation"],
-        currentFocus: "marketing strategy"
+        recentSearches: ["sustainable brands marketing", "Gen Z coffee trends", "ethical advertising"],
+        visitedPages: ["/idea-catalyst", "/ai-image-generation", "/revenue-model"],
+        currentFocus: "Marketing and Brand Strategy",
+        preferredTone: "casual"
     });
   }, [searchParams]);
 
@@ -407,28 +428,36 @@ export default function NeuroSynapsePage() {
   };
 
   const handleMagicModeSuggest = async () => {
+    if (!userActivityContext) {
+        toast({ title: "Magic Mode Unavailable", description: "User activity context is not available for suggestions.", variant: "default" });
+        setIsMagicMode(false);
+        return;
+    }
     setIsLoading(true);
-    setCurrentLoadingMessage("Thinking like you... suggesting a prompt...");
+    setCurrentLoadingMessage("Channeling your thoughts... Crafting a Mind Prompt...");
     setError(null);
     try {
         const intentResponse = await interpretUserIntent({
-            userQuery: "What should I explore next with Neuro Synapse?", 
+            userQuery: "Suggest a complex task for Neuro Synapse based on my recent activity and focus.", 
             userContext: userActivityContext 
         });
         if (intentResponse.refinedPrompt) {
             setPrompt(intentResponse.refinedPrompt);
-            toast({title: "Magic Prompt Suggested!", description: "NeuroVichar analyzed your activity to suggest this."});
+            toast({title: "Mind Prompt Activated!", description: "NeuroVichar analyzed your activity to suggest this challenge.", className: "bg-gradient-to-r from-purple-500 to-pink-500 text-white"});
         } else if (intentResponse.interpretation) {
-            setPrompt(intentResponse.interpretation); 
-            toast({title: "Prompt Idea!", description: "Based on your activity, try exploring this concept."});
+            setPrompt(`Explore: ${intentResponse.interpretation} - specifically related to ${userActivityContext.currentFocus || 'general topics'}`); 
+            toast({title: "Prompt Idea Sparked!", description: "Based on your activity, try exploring this concept.", className: "bg-gradient-to-r from-blue-500 to-teal-500 text-white"});
         } else {
             toast({title: "Hmm...", description: "Couldn't generate a magic suggestion right now. Try entering a prompt manually!"});
         }
     } catch (e: any) {
-        setError("Failed to generate magic suggestion: " + e.message);
+        const errorMessage = e instanceof Error ? e.message : "Failed to generate magic suggestion.";
+        setError(errorMessage);
+        toast({ title: "Magic Mode Error", description: errorMessage, variant: "destructive"});
     } finally {
         setIsLoading(false);
-        setIsMagicMode(false); 
+        // Keep Magic Mode active until form is submitted or explicitly turned off by user
+        // setIsMagicMode(false); 
     }
   };
 
@@ -436,8 +465,8 @@ export default function NeuroSynapsePage() {
     event?.preventDefault();
     setIsLoading(true);
     setError(null);
-    setResult(null); // Clear previous results
-    setCurrentLoadingMessage("Initializing Neuro Synapse orchestration...");
+    setResult(null); 
+    setCurrentLoadingMessage("Initializing Neuro Synapse cognitive orchestration...");
     
     try {
       if (!prompt.trim()) {
@@ -449,13 +478,14 @@ export default function NeuroSynapsePage() {
       let imageDataUri: string | undefined = previewImage || undefined;
       
       const loadingMessages = [
-          "Sending prompt to Analyzer Agent...",
-          "Planner Agent is creating execution strategy...",
-          "Forking tasks to Executor Agents...",
-          "Agents are processing in parallel...",
-          "Performing Ethical Compliance checks...",
-          "Synthesizing results from all agents...",
-          "Finalizing the comprehensive output..."
+          "Dispatching prompt to Analyzer Agent for deconstruction...",
+          "Planner Agent is formulating a multi-agent execution strategy...",
+          "Cognitive tasks are being forked to specialized Executor Agents...",
+          "AI agents are processing data streams in parallel...",
+          "Ethical Compliance Matrix is being cross-referenced...",
+          "Cross-agent debate and consensus simulation in progress...",
+          "Synthesizing diverse insights into a unified response...",
+          "Finalizing the comprehensive Neuro Synapse output matrix..."
       ];
       let msgIndex = 0;
       const msgInterval = setInterval(() => {
@@ -472,12 +502,12 @@ export default function NeuroSynapsePage() {
         throw new Error("Neuro Synapse returned an incomplete or invalid response structure. Orchestration might have failed.");
       }
       setResult(response);
-      if (response.orkesWorkflowStatus === "FAILED" || response.orkesWorkflowStatus === "FAILED_IN_CLIENT" || response.orkesWorkflowStatus?.toUpperCase() !== "COMPLETED") {
-        const failureReason = response.workflowExplanation || response.synthesizedAnswer || "Orkes workflow failed or client-side error.";
+      if (response.orkesWorkflowStatus && response.orkesWorkflowStatus.toUpperCase() !== "COMPLETED") {
+        const failureReason = response.workflowExplanation || response.synthesizedAnswer || "Orkes workflow did not complete successfully.";
         setError(failureReason);
         toast({ title: "Orchestration Issue", description: failureReason.substring(0,120) + "...", variant: "destructive" });
       } else {
-        toast({ title: "Neuro Synapse Complete!", description: `Workflow ${response.orkesWorkflowId} finished with status: ${response.orkesWorkflowStatus}.` });
+        toast({ title: "Neuro Synapse Complete!", description: `Workflow ${response.orkesWorkflowId || 'N/A'} finished. Output generated.`, className: "bg-green-500/80 text-white dark:bg-green-600/80 backdrop-blur-md border-green-700" });
       }
 
     } catch (e: any) {
@@ -506,7 +536,7 @@ export default function NeuroSynapsePage() {
             Neuro Synapse
           </motion.h1>
           <motion.p initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="text-xl text-muted-foreground mt-2 max-w-3xl">
-            AI Orchestrator: Decompose challenges, assign to AI agents, simulate execution, and synthesize comprehensive solutions with full reasoning trace.
+            Cognitive AI Orchestrator: Deconstructs complex challenges, delegates to specialized AI agents, simulates collaborative reasoning, and synthesizes comprehensive solutions with full transparency.
           </motion.p>
         </div>
       </header>
@@ -518,18 +548,31 @@ export default function NeuroSynapsePage() {
               <div>
                 <CardTitle className="text-3xl font-semibold text-foreground/95">Engage Neuro Synapse</CardTitle>
                 <CardDescription className="text-base text-muted-foreground">
-                  Enter a complex prompt. Optionally upload an image or try Magic Mode for AI-suggested prompts.
+                  Enter a complex prompt. Optionally upload an image or try the experimental "Mind Prompt" (Magic Mode) for AI-suggested tasks based on your activity.
                 </CardDescription>
               </div>
-              <Button variant="outline" onClick={() => { setIsMagicMode(true); handleMagicModeSuggest(); }} disabled={isLoading} className="bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 active:scale-95">
-                <Wand2 className="mr-2 h-5 w-5" /> Try Magic Mode
+              <Button 
+                variant={isMagicMode ? "default" : "outline"} 
+                onClick={() => { 
+                    if(isMagicMode) { setIsMagicMode(false); setPrompt(''); } // Turn off magic mode and clear prompt
+                    else { setIsMagicMode(true); handleMagicModeSuggest(); }
+                }} 
+                disabled={isLoading} 
+                className={cn(
+                    "bg-gradient-to-r text-white hover:shadow-xl transition-all transform hover:scale-105 active:scale-95",
+                    isMagicMode 
+                        ? "from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 ring-2 ring-offset-2 ring-purple-500" 
+                        : "from-gray-600 to-gray-800 hover:from-gray-700 hover:to-gray-900 border border-input"
+                )}
+              >
+                <Wand2 className={cn("mr-2 h-5 w-5", isMagicMode && "animate-pulse text-yellow-300")} /> {isMagicMode ? "Mind Prompt Active" : "Activate Mind Prompt"}
               </Button>
             </div>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="neuro-prompt-input" className="text-md font-medium text-foreground/80">Your Complex Prompt</Label>
+                <Label htmlFor="neuro-prompt-input" className="text-md font-medium text-foreground/80">Your Complex Prompt {isMagicMode && <span className="text-xs text-purple-400">(Mind Prompt Suggested)</span>}</Label>
                 <Input id="neuro-prompt-input" placeholder="e.g., 'Analyze the future of AI in healthcare...'" value={prompt} onChange={(e) => setPrompt(e.target.value)} disabled={isLoading} required className="text-lg p-4 h-14 bg-background/60 focus:bg-background focus:ring-accent focus:border-accent text-foreground/90 placeholder-muted-foreground/70 rounded-lg shadow-inner" aria-label="Complex Prompt for Neuro Synapse" />
               </div>
               <div className="space-y-2">
@@ -557,7 +600,8 @@ export default function NeuroSynapsePage() {
             key="loading-indicator-ns" 
             initial={{ opacity: 0, height: 0, y: 20 }} 
             animate={{ opacity: 1, height: 'auto', y: 0 }} 
-            exit={{ opacity: 0, height: 0, y: -20, transition: { duration: 0.3 } }} 
+            exit={{ opacity: 0, height: 0, y: -20, transition: { duration: 0.3 } }}
+            transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.1 }}
             className="space-y-6 mt-10"
           >
             <Card className="shadow-xl bg-card/85 backdrop-blur-sm border-primary/20">
@@ -588,7 +632,7 @@ export default function NeuroSynapsePage() {
                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }} className="p-2 bg-accent/15 rounded-full shadow-md"> <Brain className="w-10 h-10 text-accent drop-shadow-md" /> </motion.div>
                     <div>
                         <CardTitle className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-accent via-primary to-pink-500"> Neuro Synapse Output </CardTitle>
-                        <CardDescription className="text-base mt-1.5 text-muted-foreground">Orkes Workflow ID: <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono shadow-sm">{result.orkesWorkflowId || "N/A"}</code> | Status: <Badge variant={result.orkesWorkflowStatus?.toUpperCase() === "COMPLETED" ? "default" : "destructive"} className={result.orkesWorkflowStatus?.toUpperCase() === "COMPLETED" ? "bg-green-500/20 border-green-500 text-green-700 dark:text-green-300" : "bg-red-500/20 border-red-500 text-red-700 dark:text-red-300"}>{result.orkesWorkflowStatus || "Unknown"}</Badge> </CardDescription>
+                        <CardDescription className="text-base mt-1.5 text-muted-foreground">Orkes Workflow ID: <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono shadow-sm">{result.orkesWorkflowId || "N/A"}</code> | Status: <Badge variant={result.orkesWorkflowStatus?.toUpperCase() === "COMPLETED" ? "default" : "destructive"} className={cn(result.orkesWorkflowStatus?.toUpperCase() === "COMPLETED" ? "bg-green-500/20 border-green-500 text-green-700 dark:text-green-300" : "bg-red-500/20 border-red-500 text-red-700 dark:text-red-300", "shadow-sm")}>{result.orkesWorkflowStatus || "Unknown"}</Badge> </CardDescription>
                     </div>
                 </div>
                 {result.hasImageContext && <Badge variant="outline" className="text-sm border-teal-500 text-teal-600 dark:text-teal-300 bg-teal-500/10 py-1.5 px-3.5 flex items-center gap-2 shadow-sm"> <ImageIcon className="w-4 h-4" /> Image Context Used </Badge>}
@@ -622,9 +666,15 @@ export default function NeuroSynapsePage() {
               <Separator className="bg-border/70" />
               <div className="grid md:grid-cols-2 gap-10 items-start">
                 <motion.section className="space-y-5" initial={{opacity:0, x:-25}} animate={{opacity:1,x:0}} transition={{delay:0.45, duration:0.5, ease:"easeOut"}}>
-                  <h3 className="text-xl font-semibold text-foreground flex items-center gap-3"> <Users className="w-7 h-7 text-green-500 dark:text-green-400" /> Agent Activity Log (Orkes Tasks) </h3>
+                  <h3 className="text-xl font-semibold text-foreground flex items-center gap-3"> <FileText className="w-7 h-7 text-blue-500 dark:text-blue-400" /> Agent Activity Log (Orkes Tasks) </h3>
                    <ScrollArea className="h-[450px] pr-3.5 -mr-1.5 border p-4 rounded-xl bg-muted/30 dark:bg-muted/20 shadow-xl">
-                    {result.decomposedTasks.map((task, index) => ( <SubTaskCard key={task.id || `task-${index}`} task={task} index={index} /> ))}
+                    {(result.agentActivityLog && result.agentActivityLog.length > 0) ? (
+                       <ul className="space-y-2.5">
+                          {result.agentActivityLog.map((logEntry, index) => ( <AgentActivityLogDisplay key={`log-${index}`} log={logEntry} index={index} /> ))}
+                       </ul>
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">No detailed agent activity log available.</p>
+                    )}
                   </ScrollArea>
                 </motion.section>
                 <motion.section className="space-y-5" initial={{opacity:0, x:25}} animate={{opacity:1,x:0}} transition={{delay:0.5, duration:0.5, ease:"easeOut"}}>
@@ -634,6 +684,13 @@ export default function NeuroSynapsePage() {
                   </Card>
                 </motion.section>
               </div>
+               <Separator className="bg-border/70" />
+              <motion.section initial={{opacity:0, y:15}} animate={{opacity:1,y:0}} transition={{delay:0.55, duration:0.5, ease:"easeOut"}}>
+                  <h3 className="text-xl font-semibold text-foreground flex items-center gap-3"> <Users className="w-7 h-7 text-green-500 dark:text-green-400" /> Decomposed Task Statuses (From Orkes) </h3>
+                   <ScrollArea className="h-[450px] pr-3.5 -mr-1.5 border p-4 rounded-xl bg-muted/30 dark:bg-muted/20 shadow-xl mt-4">
+                    {result.decomposedTasks.map((task, index) => ( <SubTaskCard key={task.id || `task-${index}`} task={task} index={index} /> ))}
+                  </ScrollArea>
+              </motion.section>
               <Separator className="bg-border/70" />
               <motion.section initial={{opacity:0, y:15}} animate={{opacity:1,y:0}} transition={{delay:0.6, duration:0.5, ease:"easeOut"}}>
                 <h3 className="text-2xl font-bold mb-5 text-foreground flex items-center gap-3"> <SlidersHorizontal className="w-8 h-8 text-blue-500 dark:text-blue-400" /> Visual Workflow Diagram (Orkes Process) </h3>
@@ -652,20 +709,20 @@ export default function NeuroSynapsePage() {
                 <div className="flex-1 text-muted-foreground text-base leading-relaxed prose prose-base dark:prose-invert max-w-none">
                     <p>Neuro Synapse leverages Orkes Conductor, a powerful workflow orchestration engine, to manage complex AI tasks. When you submit a prompt, Neuro Synapse initiates a predefined workflow in Orkes.</p>
                     <p>This workflow involves several steps:
-                      <strong>1. Analyzer:</strong> Deconstructs your prompt into sub-tasks.
+                      <strong>1. Analyzer:</strong> Deconstructs your prompt into sub-tasks, potentially considering user context.
                       <strong>2. Planner:</strong> Creates an execution plan, deciding which AI agents (like code generators, image creators, or web searchers) are needed.
-                      <strong>3. Executors (Parallel):</strong> Multiple AI agents (as HTTP microservices) work on their assigned sub-tasks simultaneously, thanks to Orkes' FORK_JOIN capability.
+                      <strong>3. Executors (Parallel):</strong> Multiple AI agents (as HTTP microservices) work on their assigned sub-tasks simultaneously, thanks to Orkes' FORK_JOIN_DYNAMIC capability. This simulates a cognitive panel.
                       <strong>4. Ethical Checker:</strong> Reviews intermediate and/or final outputs for compliance.
-                      <strong>5. Result Synthesizer:</strong> Collects all agent outputs and merges them into a single, coherent response.
+                      <strong>5. Result Synthesizer:</strong> Collects all agent outputs, simulates debate/consensus, generates workflow diagrams and explanations, and merges them into a single, coherent response.
                     </p>
-                    <p>Orkes Conductor manages the state, retries, timeouts, and data flow between these agents, ensuring a robust and scalable process. The dashboard visualizes this complex orchestration, providing transparency into the AI's "thought process."</p>
+                    <p>Orkes Conductor manages the state, retries, timeouts, and data flow between these agents, ensuring a robust and scalable process. The dashboard visualizes this complex orchestration, providing transparency into the AI's "thought process." The "Mind Prompt" feature further enhances this by suggesting tasks based on your digital footprint.</p>
                 </div>
                 <motion.div className="flex-shrink-0 w-full md:w-1/3" initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}} transition={{delay:0.2, duration:0.5}}>
                     <NextImage src="https://picsum.photos/seed/orkesCloud/400/350" alt="Orkes Cloud Orchestration Conceptual Art" width={400} height={350} className="rounded-xl shadow-2xl object-cover border-2 border-accent/30" data-ai-hint="cloud orchestration" />
                 </motion.div>
             </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6">
-            {[ { icon: <SearchCode className="w-7 h-7 text-accent" />, title: "Prompt Analysis", description: "AI deconstructs prompts into actionable sub-tasks." }, { icon: <Share2 className="w-7 h-7 text-accent" />, title: "Dynamic Orchestration", description: "Orkes Conductor manages complex agent workflows." }, { icon: <Users className="w-7 h-7 text-accent" />, title: "Parallel Agent Execution", description: "Multiple AI agents work simultaneously for efficiency." }, { icon: <ImageIcon className="w-7 h-7 text-accent" />, title: "Hybrid AI Collaboration", description: "LLMs, vision models, and web agents work together." }, { icon: <ShieldCheck className="w-7 h-7 text-accent" />, title: "Ethical Filtering", description: "Ensures outputs align with safety and ethical guidelines." }, { icon: <Workflow className="w-7 h-7 text-accent" />, title: "Transparent Reasoning", description: "Visualizes workflow and agent activity for clarity." }, ].map((item, idx) => ( <motion.div key={item.title} initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{delay:0.3 + idx*0.05, duration:0.4}} className="p-4 bg-muted/40 dark:bg-muted/30 rounded-lg shadow-md border border-border/50"> <div className="flex items-center gap-3 mb-2"> {item.icon} <h4 className="text-md font-semibold text-foreground">{item.title}</h4> </div> <p className="text-xs text-muted-foreground">{item.description}</p> </motion.div> ))}
+            {[ { icon: <SearchCode className="w-7 h-7 text-accent" />, title: "Contextual Prompt Analysis", description: "AI deconstructs prompts, considering user activity for relevance." }, { icon: <Share2 className="w-7 h-7 text-accent" />, title: "Dynamic Orchestration", description: "Orkes Conductor manages complex agent workflows with forks, joins, and decisions." }, { icon: <Users className="w-7 h-7 text-accent" />, title: "Parallel Agent Execution", description: "Multiple AI agents work simultaneously for efficiency, simulating a cognitive panel." }, { icon: <Wand2 className="w-7 h-7 text-accent" />, title: "Mind Prompt Suggestions", description: "AI suggests tasks based on user's digital footprint and app behavior." }, { icon: <ShieldCheck className="w-7 h-7 text-accent" />, title: "Ethical Filtering & Debate", description: "Ensures outputs align with safety guidelines, with simulated cross-agent verification." }, { icon: <Workflow className="w-7 h-7 text-accent" />, title: "Transparent Reasoning", description: "Visualizes workflow, agent activity, and tool usage for complete clarity." }, ].map((item, idx) => ( <motion.div key={item.title} initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{delay:0.3 + idx*0.05, duration:0.4}} className="p-4 bg-muted/40 dark:bg-muted/30 rounded-lg shadow-md border border-border/50"> <div className="flex items-center gap-3 mb-2"> {item.icon} <h4 className="text-md font-semibold text-foreground">{item.title}</h4> </div> <p className="text-xs text-muted-foreground">{item.description}</p> </motion.div> ))}
           </div>
         </CardContent>
       </Card>
