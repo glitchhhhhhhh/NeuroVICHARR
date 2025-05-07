@@ -1,0 +1,192 @@
+
+# src/workflows/neuro_synapse_workflow_v1.yaml
+name: "neuro_synapse_workflow_v1"
+description: "Orchestrates AI agents to process complex prompts for NeuroVichar."
+version: 1
+ownerEmail: "dev@neurovichar.ai"
+restartable: true
+workflowStatusListenerEnabled: true
+
+tasks:
+  - name: "analyze_prompt_task"
+    taskReferenceName: "analyze_prompt_ref"
+    type: "HTTP"
+    inputParameters:
+      http_request:
+        uri: "${env.NGROK_BASE_URL}/api/agents/analyzer" # Exposed local endpoint
+        method: "POST"
+        contentType: "application/json"
+        body: "${workflow.input}" # Pass the entire workflow input to the analyzer
+    retryCount: 2
+    retryLogic: "FIXED"
+    retryDelaySeconds: 10
+    timeoutSeconds: 120 # 2 minutes
+
+  - name: "plan_execution_task"
+    taskReferenceName: "plan_execution_ref"
+    type: "HTTP"
+    inputParameters:
+      http_request:
+        uri: "${env.NGROK_BASE_URL}/api/agents/planner"
+        method: "POST"
+        contentType: "application/json"
+        body:
+          input: "${analyze_prompt_ref.output}" # Output from analyzer is input to planner
+    retryCount: 2
+    retryLogic: "FIXED"
+    retryDelaySeconds: 5
+    timeoutSeconds: 60
+
+  # This DECISION task can determine if parallel execution is needed or if a simpler path can be taken
+  - name: "decide_execution_path_task"
+    taskReferenceName: "decide_execution_path_ref"
+    type: "DECISION"
+    inputParameters:
+      # We need a way for the planner to indicate if a fork is needed.
+      # Let's assume planner.output.executionPlan is an array and its length determines fork.
+      # Or planner.output.requiresFork (boolean)
+      planned_task_count: "${plan_execution_ref.output.executionPlan.length}"
+    caseValueParam: "planned_task_count"
+    decisionCases:
+      "0": # No tasks planned by planner, perhaps a direct synthesis or fallback
+        - name: "ethical_check_direct_synthesis_task"
+          taskReferenceName: "ethical_check_direct_synthesis_ref"
+          type: "HTTP"
+          inputParameters:
+            http_request:
+              uri: "${env.NGROK_BASE_URL}/api/agents/ethical-checker"
+              method: "POST"
+              contentType: "application/json"
+              body:
+                input:
+                  contentToReview:
+                    originalPrompt: "${workflow.input.mainPrompt}"
+                    analysisSummary: "${analyze_prompt_ref.output.analysisSummary}"
+                    planSummary: "No complex execution path planned."
+                  originalPrompt: "${workflow.input.mainPrompt}"
+                  currentStage: "direct_synthesis_review"
+          # ... retries, timeout
+        - name: "synthesize_direct_result_task" # Simplified synthesizer for no-fork case
+          taskReferenceName: "synthesize_direct_result_ref"
+          type: "HTTP"
+          inputParameters:
+            http_request:
+              uri: "${env.NGROK_BASE_URL}/api/agents/result-synthesizer"
+              method: "POST"
+              contentType: "application/json"
+              body:
+                input:
+                  originalPrompt: "${workflow.input.mainPrompt}"
+                  hasImageContext: "${workflow.input.hasImageContext}"
+                  analysisSummary: "${analyze_prompt_ref.output.analysisSummary}"
+                  planSummary: "No complex execution path planned; direct synthesis."
+                  executorOutputs: [] # No forked executors
+                  ethicalCheckResult: "${ethical_check_direct_synthesis_ref.output}"
+          # ... retries, timeout
+    defaultCase: # One or more tasks planned, proceed to fork
+        - name: "fork_join_executors_task"
+          taskReferenceName: "fork_join_executors_ref"
+          type: "FORK_JOIN_DYNAMIC" # Dynamic fork based on planner's output
+          inputParameters:
+            dynamicForkTasksParam: "dynamic_tasks_input" # Parameter name that holds the list of tasks to fork
+            dynamicForkTasksInput: "${plan_execution_ref.output.executionPlan}" # Array of task defs from planner
+          # Each item in plan_execution_ref.output.executionPlan should be an object:
+          # { name: "task_def_name", taskReferenceName: "unique_ref", input: { ...task_input... } }
+          # e.g., [{ name: "execute_code_generation_task", taskReferenceName: "code_gen_1", input: { "promptFragment": "..." } }]
+
+        # JOIN task is implicit in FORK_JOIN_DYNAMIC. Output of fork_join_executors_ref will be a map:
+        # { "unique_ref1": {output...}, "unique_ref2": {output...} }
+
+        - name: "ethical_check_intermediate_results_task"
+          taskReferenceName: "ethical_check_intermediate_ref"
+          type: "HTTP"
+          inputParameters:
+            http_request:
+              uri: "${env.NGROK_BASE_URL}/api/agents/ethical-checker"
+              method: "POST"
+              contentType: "application/json"
+              body:
+                input:
+                  contentToReview: "${fork_join_executors_ref.output}" # Review all executor outputs
+                  originalPrompt: "${workflow.input.mainPrompt}"
+                  currentStage: "pre_synthesis_review"
+          retryCount: 1
+          timeoutSeconds: 60
+
+        - name: "synthesize_final_result_task"
+          taskReferenceName: "synthesize_final_result_ref"
+          type: "HTTP"
+          inputParameters:
+            http_request:
+              uri: "${env.NGROK_BASE_URL}/api/agents/result-synthesizer"
+              method: "POST"
+              contentType: "application/json"
+              body:
+                input:
+                  originalPrompt: "${workflow.input.mainPrompt}"
+                  hasImageContext: "${workflow.input.hasImageContext}"
+                  analysisSummary: "${analyze_prompt_ref.output.analysisSummary}"
+                  planSummary: "${plan_execution_ref.output.planSummary}"
+                  # Convert map from FORK_JOIN_DYNAMIC to an array for the synthesizer
+                  executorOutputs: "${jsonUtils.toJsonPath(fork_join_executors_ref.output, '$.*')}"
+                  ethicalCheckResult: "${ethical_check_intermediate_ref.output}"
+          retryCount: 1
+          timeoutSeconds: 180 # 3 minutes for synthesis
+
+# Output parameters define what the workflow returns upon completion
+outputParameters:
+  # Depending on the DECISION path, one of these will be populated
+  finalAnswer: "${synthesize_final_result_ref.output}" # If defaultCase was taken
+  directAnswer: "${synthesize_direct_result_ref.output}" # If case "0" was taken
+  # Add a way to know which path was taken or consolidate output structure
+  workflowPathTaken: "${decide_execution_path_ref.output.caseOutput}" # Or a custom output from decision
+  overallEthicalCompliance: > # Consolidate ethical output
+    ${if (decide_execution_path_ref.output.caseOutput == '0') then ethical_check_direct_synthesis_ref.output else ethical_check_intermediate_ref.output endif}
+
+# Define task definitions that are referenced by 'name' in the FORK_JOIN_DYNAMIC input
+# These are templates. The actual taskReferenceName and input are provided by the planner.
+taskDefinitions:
+  - name: "execute_web_search_task" # Should match 'name' in planner output
+    retryCount: 2
+    timeoutSeconds: 120
+    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext"]
+    outputKeys: ["searchResults", "summary", "status", "error"]
+    http_request: # This part is for Orkes UI to know it's an HTTP task if registered globally
+        uri: "${env.NGROK_BASE_URL}/api/agents/executor-web-search"
+        method: "POST"
+        contentType: "application/json"
+
+  - name: "execute_image_generation_task"
+    retryCount: 1 # Image gen can be slow/costly
+    timeoutSeconds: 300 # 5 minutes
+    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext"]
+    outputKeys: ["imageDataUri", "imageUrl", "altText", "status", "error"]
+    http_request:
+        uri: "${env.NGROK_BASE_URL}/api/agents/executor-image"
+        method: "POST"
+        contentType: "application/json"
+
+  - name: "execute_code_generation_task"
+    retryCount: 2
+    timeoutSeconds: 180
+    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext"]
+    outputKeys: ["generatedCode", "language", "executionLog", "status", "error"]
+    http_request:
+        uri: "${env.NGROK_BASE_URL}/api/agents/executor-code"
+        method: "POST"
+        contentType: "application/json"
+        
+  - name: "execute_text_synthesis_task"
+    retryCount: 2
+    timeoutSeconds: 120
+    inputKeys: ["promptFragment", "originalPrompt", "hasImageContext", "contextData"]
+    outputKeys: ["synthesizedText", "status", "error"]
+    http_request:
+        uri: "${env.NGROK_BASE_URL}/api/agents/executor-text"
+        method: "POST"
+        contentType: "application/json"
+  # Note: The HTTP tasks directly in the main flow (analyzer, planner, ethical-checker, result-synthesizer)
+  # already have their HTTP config. These taskDefinitions are specifically for tasks
+  # that will be dynamically invoked by FORK_JOIN_DYNAMIC.
+  # Orkes needs to know their basic structure (input/output keys) if they aren't pre-registered.
+  # Alternatively, pre-register all task definitions via API using orkesClient.metadataResource.registerTaskDefs().

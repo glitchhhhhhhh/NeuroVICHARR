@@ -1,7 +1,7 @@
 
 'use client';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google'; // Changed from Geist
+import { Inter } from 'next/font/google'; 
 import './globals.css';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
@@ -13,6 +13,17 @@ import { ModeToggle } from '@/components/mode-toggle';
 import { ThemeProvider } from "@/components/theme-provider";
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
+
+// Attempt to load .env for server-side (e.g. scripts) if not already loaded by Next.js
+// This might be redundant for typical Next.js app flow but useful for standalone scripts.
+if (process.env.NODE_ENV !== 'production' && typeof window === 'undefined') {
+  try {
+    require('dotenv').config({ path: require('path').resolve(process.cwd(), '.env') });
+  } catch (e) {
+    // console.warn("dotenv config not found or failed to load in layout.ts, assuming Next.js handles it.");
+  }
+}
+
 
 const inter = Inter({ 
   variable: '--font-sans', 
@@ -37,7 +48,7 @@ export default function RootLayout({
     return (
       <html lang="en" suppressHydrationWarning>
         <head>
-          <title>{String(metadataObject.title)}</title> {/* Updated to use full title */}
+          <title>{String(metadataObject.title)}</title> 
           <meta name="description" content={String(metadataObject.description)} />
         </head>
         <body className={`${inter.variable} font-sans antialiased`}>
@@ -243,4 +254,3 @@ export default function RootLayout({
     </html>
   );
 }
-
