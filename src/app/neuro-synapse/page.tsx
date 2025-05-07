@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, type FormEvent, useEffect, useMemo, ChangeEvent } from 'react';
@@ -6,19 +5,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, Zap, Loader2, Workflow, MessageSquare, Activity, CheckCircle2, AlertCircle, Newspaper, Wrench, Lightbulb, Users, ThermometerSnowflake, ImageUp, Image as ImageIcon, Share2, SearchCode, SlidersHorizontal, BrainCircuit } from "lucide-react"; // Added ImageUp, ImageIcon, BrainCircuit
+import { Brain, Zap, Loader2, Workflow, MessageSquare, Activity, CheckCircle2, AlertCircle, Newspaper, Wrench, Lightbulb, Users, ThermometerSnowflake, ImageUp, Image as ImageIcon, Share2, SearchCode, SlidersHorizontal, BrainCircuit, TimerOff, XCircle } from "lucide-react"; // Added TimerOff, XCircle
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { neuroSynapse, type NeuroSynapseOutput, type SubTask, type ToolUsage } from '@/ai/flows/neuro-synapse-flow';
+import { neuroSynapse, type NeuroSynapseOutput, type SubTask } from '@/ai/flows/neuro-synapse-flow'; // Removed ToolUsage as it's not directly used here for typing the page state
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import NextImage from 'next/image'; // Renamed to avoid conflict with Lucide icon
+import NextImage from 'next/image'; 
 import { useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
+import type { ToolUsage } from '@/ai/flows/neuro-synapse-flow';
 
 
 const NodeIcon: React.FC<{ type: NeuroSynapseOutput['workflowDiagramData']['nodes'][0]['type'], className?: string }> = ({ type, className = "w-6 h-6" }) => {
@@ -169,7 +169,7 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
         Object.entries(levels).forEach(([lvlStr, nodesInLevel]) => {
             const currentLevel = parseInt(lvlStr);
             const levelNodeCount = nodesInLevel.length;
-            const levelWidth = levelNodeCount * (nodeWidth + horizontalGap) - horizontalGap;
+            // const levelWidth = levelNodeCount * (nodeWidth + horizontalGap) - horizontalGap; // Not used directly for X positioning here.
 
 
             nodesInLevel.forEach((nodeId, index) => {
@@ -200,7 +200,7 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
       <Card className="p-6 border rounded-lg bg-muted/30 text-center text-muted-foreground shadow-inner min-h-[450px] flex items-center justify-center">
         <AlertCircle className="w-10 h-10 mx-auto mb-3 text-destructive/70" />
         <p className="text-lg font-medium">Workflow diagram data is missing or incomplete.</p>
-        <p className="text-sm">The AI might not have generated the necessary structure for visualization.</p>
+        <p className="text-sm">The AI might not have generated the necessary structure for visualization, or the workflow did not execute as expected.</p>
       </Card>
     );
   }
@@ -269,27 +269,40 @@ const SubTaskCard: React.FC<{ task: SubTask, index: number }> = ({ task, index }
   let statusTextColor: string;
   let statusBgClass: string;
 
-  switch (task.status) {
-    case 'completed':
+  switch (task.status.toUpperCase()) { // Ensure consistent case handling
+    case 'COMPLETED':
       IconComponent = CheckCircle2;
       statusColorClass = 'border-green-500 dark:border-green-400';
       statusTextColor = 'text-green-600 dark:text-green-300';
       statusBgClass = 'bg-green-500/10 dark:bg-green-500/15';
       break;
-    case 'processing':
+    case 'IN_PROGRESS': // Mapped from 'processing' for consistency
       IconComponent = Loader2;
       statusColorClass = 'border-blue-500 dark:border-blue-400';
       statusTextColor = 'text-blue-600 dark:text-blue-300';
       statusBgClass = 'bg-blue-500/10 dark:bg-blue-500/15';
       break;
-    case 'failed':
+    case 'FAILED':
       IconComponent = AlertCircle;
       statusColorClass = 'border-red-500 dark:border-red-400';
       statusTextColor = 'text-red-600 dark:text-red-300';
       statusBgClass = 'bg-red-500/10 dark:bg-red-500/15';
       break;
-    default: // pending
-      IconComponent = ThermometerSnowflake;
+    case 'TIMED_OUT':
+      IconComponent = TimerOff;
+      statusColorClass = 'border-orange-500 dark:border-orange-400';
+      statusTextColor = 'text-orange-600 dark:text-orange-300';
+      statusBgClass = 'bg-orange-500/10 dark:bg-orange-500/15';
+      break;
+    case 'CANCELLED':
+      IconComponent = XCircle;
+      statusColorClass = 'border-gray-500 dark:border-gray-400';
+      statusTextColor = 'text-gray-600 dark:text-gray-300';
+      statusBgClass = 'bg-gray-500/10 dark:bg-gray-500/15';
+      break;
+    case 'PENDING':
+    default: 
+      IconComponent = ThermometerSnowflake; // Or a more suitable icon for pending
       statusColorClass = 'border-gray-400 dark:border-gray-500';
       statusTextColor = 'text-gray-600 dark:text-gray-400';
       statusBgClass = 'bg-gray-400/10 dark:bg-gray-400/15';
@@ -304,7 +317,7 @@ const SubTaskCard: React.FC<{ task: SubTask, index: number }> = ({ task, index }
       <Card className={cn(`mb-3.5 shadow-lg transition-all hover:shadow-xl border-l-4 overflow-hidden`, statusColorClass, statusBgClass)}>
         <CardHeader className="p-4 flex flex-row items-start justify-between space-x-3.5">
             <div className="flex-shrink-0 pt-0.5">
-                 <IconComponent className={cn(`w-6 h-6`, statusTextColor, task.status === 'processing' ? 'animate-spin' : '')} />
+                 <IconComponent className={cn(`w-6 h-6`, statusTextColor, task.status.toUpperCase() === 'IN_PROGRESS' ? 'animate-spin' : '')} />
             </div>
             <div className="flex-grow">
                 <CardTitle className="text-md font-semibold text-foreground">
@@ -313,7 +326,7 @@ const SubTaskCard: React.FC<{ task: SubTask, index: number }> = ({ task, index }
                 <CardDescription className="text-sm pt-1 text-muted-foreground/90">{task.taskDescription}</CardDescription>
             </div>
             <Badge variant="outline" className={cn(`capitalize text-xs px-2.5 py-1 rounded-full font-medium border`, statusTextColor, statusColorClass, statusBgClass.replace('bg-', 'bg-opacity-50 dark:bg-opacity-50 bg-'))}>
-              {task.status}
+              {task.status.toLowerCase()}
             </Badge>
         </CardHeader>
         {task.resultSummary && (
@@ -383,6 +396,7 @@ export default function NeuroSynapsePage() {
     if (queryPrompt) {
       setPrompt(queryPrompt);
     } else {
+      // Default prompt if none is provided via query params
       setPrompt("Analyze the impact of decentralized autonomous organizations (DAOs) on traditional corporate structures, including potential benefits, challenges, and recent news headlines related to DAO governance models.");
     }
   }, [searchParams]);
@@ -431,16 +445,16 @@ export default function NeuroSynapsePage() {
 
       const response = await neuroSynapse({ mainPrompt: prompt, imageDataUri });
       if(!response || !response.workflowDiagramData || !response.decomposedTasks || !response.synthesizedAnswer){
-        console.error("Incomplete response from Neuro Synapse:", response);
-        throw new Error("Neuro Synapse returned an incomplete or invalid response structure. Required fields are missing.");
+        console.error("Incomplete response from Neuro Synapse (Orkes flow):", response);
+        throw new Error("Neuro Synapse (Orkes flow) returned an incomplete or invalid response structure. Required fields are missing.");
       }
       setResult(response);
     } catch (e: any) {
-      const errorMessage = e instanceof Error ? e.message : String(e);
+      const errorMessage = e instanceof Error ? e.message : String(e.message || e);
       setError(errorMessage || 'An unexpected error occurred with Neuro Synapse. Check console for details.');
-      console.error("Neuro Synapse error details:", e);
+      console.error("Neuro Synapse (Orkes flow) error details:", e);
       toast({
-        title: "Synapse Error",
+        title: "Synapse Orchestration Error",
         description: errorMessage.length > 100 ? errorMessage.substring(0,97) + "..." : errorMessage,
         variant: "destructive",
       });
@@ -475,7 +489,7 @@ export default function NeuroSynapsePage() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-xl text-muted-foreground mt-2 max-w-3xl"
           >
-            Your AI-powered orchestrator. Decompose complex challenges, delegate to virtual agents, leverage tools, and synthesize comprehensive solutions. Optionally, provide image context to enrich the analysis.
+            Your AI-powered orchestrator. Decompose complex challenges, delegate to virtual agents, leverage tools, and synthesize comprehensive solutions. Optionally, provide image context to enrich the analysis. This feature uses Orkes Conductor for workflow management.
           </motion.p>
         </div>
       </header>
@@ -487,9 +501,9 @@ export default function NeuroSynapsePage() {
       >
         <Card className="shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 bg-card/85 backdrop-blur-md border-primary/20">
           <CardHeader>
-            <CardTitle className="text-3xl font-semibold text-foreground/95">Engage Neuro Synapse</CardTitle>
+            <CardTitle className="text-3xl font-semibold text-foreground/95">Engage Neuro Synapse (via Orkes)</CardTitle>
             <CardDescription className="text-base text-muted-foreground">
-              Enter a complex prompt. Optionally upload an image for visual context. Neuro Synapse will decompose, simulate AI agent processing, and synthesize a comprehensive answer.
+              Enter a complex prompt. Optionally upload an image for visual context. Neuro Synapse will use an Orkes Conductor workflow to decompose the task, simulate AI agent processing, and synthesize a comprehensive answer.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -583,10 +597,10 @@ export default function NeuroSynapsePage() {
               <CardHeader className="pb-5">
                 <CardTitle className="flex items-center text-2xl font-semibold text-foreground/90">
                   <Loader2 className="mr-3 h-7 w-7 animate-spin text-accent" />
-                  Neuro Synapse is Weaving Connections...
+                  Neuro Synapse is Weaving Connections via Orkes...
                 </CardTitle>
                 <CardDescription className="text-base text-muted-foreground pt-1">
-                  Decomposing your complex prompt, analyzing image context (if provided), simulating diverse AI agent tasks, potentially consulting external tools, and synthesizing a unified, intelligent response. This intricate process may take a moment.
+                  Initiating Orkes Conductor workflow... Decomposing your complex prompt, analyzing image context (if provided), simulating diverse AI agent tasks via HTTP calls, and synthesizing a unified, intelligent response. This intricate process may take a moment.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5 p-6 pt-3">
@@ -627,9 +641,9 @@ export default function NeuroSynapsePage() {
                     </motion.div>
                     <div>
                         <CardTitle className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-accent via-primary to-pink-500">
-                            Neuro Synapse Output
+                            Neuro Synapse Output (Orkes Orchestrated)
                         </CardTitle>
-                        <CardDescription className="text-base mt-1.5 text-muted-foreground">Results from the orchestrated AI processing pipeline.</CardDescription>
+                        <CardDescription className="text-base mt-1.5 text-muted-foreground">Results from the Orkes Conductor AI processing pipeline. Orkes Workflow ID: <span className="font-mono text-xs bg-muted p-1 rounded">{result.orkesWorkflowId || 'N/A (Mocked)'}</span></CardDescription>
                     </div>
                 </div>
                 {result.hasImageContext && (
@@ -685,7 +699,7 @@ export default function NeuroSynapsePage() {
                 <motion.section className="space-y-5" initial={{opacity:0, x:-25}} animate={{opacity:1,x:0}} transition={{delay:0.45, duration:0.5, ease:"easeOut"}}>
                   <h3 className="text-xl font-semibold text-foreground flex items-center gap-3">
                     <Users className="w-7 h-7 text-green-500 dark:text-green-400" />
-                    Decomposed Sub-Tasks
+                    Decomposed Sub-Tasks (Orkes Workflow)
                   </h3>
                    <ScrollArea className="h-[450px] pr-3.5 -mr-1.5 border p-4 rounded-xl bg-muted/30 dark:bg-muted/20 shadow-xl">
                     {result.decomposedTasks.map((task, index) => (
@@ -714,7 +728,7 @@ export default function NeuroSynapsePage() {
               <motion.section initial={{opacity:0, y:15}} animate={{opacity:1,y:0}} transition={{delay:0.6, duration:0.5, ease:"easeOut"}}>
                 <h3 className="text-2xl font-bold mb-5 text-foreground flex items-center gap-3">
                   <SlidersHorizontal className="w-8 h-8 text-blue-500 dark:text-blue-400" />
-                  Visual Workflow Diagram
+                  Visual Workflow Diagram (Orkes Execution)
                 </h3>
                 <WorkflowDiagram data={result.workflowDiagramData} />
               </motion.section>
@@ -733,15 +747,16 @@ export default function NeuroSynapsePage() {
       <Card className="mt-16 bg-card/85 backdrop-blur-lg shadow-2xl border-primary/15">
         <CardHeader className="pb-4">
           <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground/95 flex items-center gap-3">
-            <BrainCircuit className="w-8 h-8 text-primary"/>About Neuro Synapse
+            <BrainCircuit className="w-8 h-8 text-primary"/>About Neuro Synapse & Orkes Integration
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
             <div className="flex flex-col md:flex-row gap-8 items-center">
                 <div className="flex-1 text-muted-foreground text-base leading-relaxed prose prose-base dark:prose-invert max-w-none">
-                    <p>Neuro Synapse stands as a sophisticated AI orchestration engine, adept at dissecting complex user prompts—and integrating optional visual context from images—into fine-grained sub-tasks. These tasks are then intelligently "virtually" delegated to a diverse array of specialized AI agents.</p>
-                    <p>These agents can autonomously leverage integrated tools for real-time data acquisition (like news headlines via <code>getTopNewsHeadlines</code>) or perform other external actions. The processed information, along with insights derived from each agent (including any visual analysis from an <code>VisualContextAnalyzer</code>), are meticulously synthesized. The final result is a coherent, comprehensive, and nuanced answer that addresses the multifaceted nature of the original query.</p>
-                    <p>This interactive demonstration showcases the entire pipeline: from initial prompt and image decomposition, through agent tasking and tool integration, to the final synthesis of information. The visual workflow diagram and detailed explanations offer a transparent view into the AI's "thought process," making complex problem-solving more accessible and understandable.</p>
+                    <p>Neuro Synapse employs Orkes Conductor, an enterprise-grade workflow orchestration platform, to manage complex AI agent interactions. When you submit a prompt (with optional image context), Neuro Synapse initiates an Orkes workflow (defined in `neuro-synapse-orkes-workflow.yaml`).</p>
+                    <p>This workflow orchestrates a series of AI agents (Analyzer, Planner, various Executors, EthicalChecker, ResultSynthesizer) which are implemented as local API endpoints (e.g., `/api/agents/analyzer`). Orkes Cloud calls these local endpoints via ngrok, which securely exposes them to the internet.</p>
+                    <p>The workflow handles task decomposition, parallel execution of executor agents (e.g., for code and image generation), ethical checks, and final result synthesis. Each step's status and output are tracked by Orkes, and the final synthesized answer is returned to you. This approach ensures robustness, scalability, and observability for complex AI pipelines.</p>
+                    <p><strong>Note:</strong> The current integration uses a mock Orkes client for local development. For full Orkes Cloud functionality, ensure your `.env` variables are set correctly and your local agent services are exposed via ngrok as per the `ORKES_INTEGRATION_GUIDE.md`.</p>
                 </div>
                 <motion.div 
                     className="flex-shrink-0 w-full md:w-1/3"
@@ -750,23 +765,23 @@ export default function NeuroSynapsePage() {
                     transition={{delay:0.2, duration:0.5}}
                 >
                     <NextImage 
-                        src="https://picsum.photos/400/350?random=synapse" 
-                        alt="Neuro Synapse Conceptual Art" 
+                        src="https://picsum.photos/400/350?random=orkes" 
+                        alt="Orkes Conductor Conceptual Art" 
                         width={400} 
                         height={350} 
                         className="rounded-xl shadow-2xl object-cover border-2 border-accent/30"
-                        data-ai-hint="abstract brain network"
+                        data-ai-hint="workflow orchestration"
                     />
                 </motion.div>
             </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6">
             {[
-              { icon: <SearchCode className="w-7 h-7 text-accent" />, title: "Intelligent Decomposition", description: "Breaks complex problems into manageable sub-tasks." },
-              { icon: <Users className="w-7 h-7 text-accent" />, title: "Agent Delegation", description: "Assigns tasks to specialized virtual AI agents." },
-              { icon: <Wrench className="w-7 h-7 text-accent" />, title: "Tool Integration", description: "Agents can use tools like web search or data lookup." },
+              { icon: <SearchCode className="w-7 h-7 text-accent" />, title: "Workflow Orchestration", description: "Orkes manages complex task dependencies and execution flow." },
+              { icon: <Users className="w-7 h-7 text-accent" />, title: "Agent Microservices", description: "AI agents run as independent, callable API endpoints." },
+              { icon: <Zap className="w-7 h-7 text-accent" />, title: "Parallel Execution", description: "FORK_JOIN in Orkes enables concurrent task processing." },
               { icon: <ImageIcon className="w-7 h-7 text-accent" />, title: "Image Context", description: "Incorporates visual information into its analysis." },
               { icon: <Share2 className="w-7 h-7 text-accent" />, title: "Result Synthesis", description: "Combines all insights into a single, cohesive answer." },
-              { icon: <Workflow className="w-7 h-7 text-accent" />, title: "Transparent Workflow", description: "Visualizes the entire process for clarity." },
+              { icon: <Workflow className="w-7 h-7 text-accent" />, title: "Observability", description: "Orkes provides visibility into workflow execution." },
             ].map((item, idx) => (
               <motion.div 
                 key={item.title}
@@ -790,4 +805,3 @@ export default function NeuroSynapsePage() {
     </div>
   );
 }
-

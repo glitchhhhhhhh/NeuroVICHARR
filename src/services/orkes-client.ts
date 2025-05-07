@@ -47,7 +47,7 @@ class OrkesConductorClient {
   public workflowResource = {
     startWorkflow: async (request: StartWorkflowRequest): Promise<{ workflowId: string }> => {
       console.log(`[Mock Orkes Client] Attempting to start workflow: ${request.name}`);
-      console.log(`[Mock Orkes Client] Server URL: ${this.config.serverUrl}`);
+      console.log(`[Mock Orkes Client] Server URL (mocked context): ${this.config.serverUrl}`);
       // In a real client, you would make an HTTP POST request here
       // For example:
       // const response = await fetch(`${this.config.serverUrl}/api/workflow`, {
@@ -96,23 +96,37 @@ class OrkesConductorClient {
       const elapsedTime = Date.now() - workflow.startTime;
       if (workflow.status === 'RUNNING' && elapsedTime > 5000) { // Simulate completion after 5s
         workflow.status = 'COMPLETED';
+        
+        // Define example statuses for decomposed tasks
+        const taskStatuses: ('PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'TIMED_OUT' | 'CANCELLED')[] = [
+            'COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED'
+        ];
+        // Randomly fail one task for demonstration, or make it timed out, etc.
+        const randomIndex = Math.floor(Math.random() * taskStatuses.length);
+        if (Math.random() < 0.15) taskStatuses[randomIndex] = 'FAILED';
+        else if (Math.random() < 0.05) taskStatuses[randomIndex] = 'TIMED_OUT';
+
+
         workflow.output = {
-          finalAnswer: `Synthesized answer for prompt: '${workflow.input?.prompt || 'Unknown'}'. Image provided: ${!!workflow.input?.imageDataUri}`,
-          ethicalCompliance: {
-            isCompliant: true,
-            remarks: "All checks passed.",
-          },
-          taskBreakdown: [
-            { agent: "Analyzer", status: "COMPLETED", summary: "Prompt analyzed." },
-            { agent: "Planner", status: "COMPLETED", summary: "Plan created." },
-            { agent: "EthicalChecker", status: "COMPLETED", summary: "Content deemed ethical." },
-            { agent: "ResultSynthesizer", status: "COMPLETED", summary: "Final result synthesized." },
+          finalAnswer: `Synthesized answer for prompt: '${workflow.input?.prompt || 'Unknown'}'. Image provided: ${!!workflow.input?.imageDataUri}. (This is a mock response from a simulated Orkes workflow.)`,
+          workflowExplanation: "The Orkes workflow was **simulated locally**. User input was 'analyzed', a 'plan' was formed, tasks (code, image, eval) were 'forked & joined', an 'ethical check' was performed, and the final result 'synthesized'. No actual calls to an Orkes Cloud instance were made in this mock execution.",
+          decomposedTasks: [
+            { id: "analyze_prompt_ref", taskDescription: "Analyze user prompt", assignedAgent: "AnalyzerAgent", status: taskStatuses[0], resultSummary: taskStatuses[0] === 'COMPLETED' ? "Prompt analysis complete." : (taskStatuses[0] === 'FAILED' ? "Analysis failed due to an internal error." : "Analysis timed out.")},
+            { id: "plan_execution_ref", taskDescription: "Plan execution strategy", assignedAgent: "PlannerAgent", status: taskStatuses[1], resultSummary: "Execution plan generated."},
+            { id: "execute_code_gen_ref", taskDescription: "Execute: Code Generation", assignedAgent: "CodeGenerator", status: taskStatuses[2], resultSummary: "Mock code generated successfully."},
+            { id: "execute_image_gen_ref", taskDescription: "Execute: Image Generation", assignedAgent: "ImageGenerator", status: taskStatuses[3], resultSummary: "Mock image data URI produced."},
+            { id: "execute_eval_ref", taskDescription: "Execute: Evaluation", assignedAgent: "Evaluator", status: taskStatuses[4], resultSummary: "Evaluation completed with score: 0.85."},
+            { id: "ethical_check_ref", taskDescription: "Ethical Compliance Check", assignedAgent: "EthicalCheckerAgent", status: taskStatuses[5], resultSummary: "Compliance: true. Issues: None"},
+            { id: "synthesize_final_result_ref", taskDescription: "Synthesize Final Result", assignedAgent: "ResultSynthesizerAgent", status: taskStatuses[6], resultSummary: "Final answer compiled and ready."}
           ],
-           workflowDiagramData: { // Mocked diagram data
+           workflowDiagramData: { 
             nodes: [
               { id: 'userInput', label: 'User Input', type: 'input' },
               { id: 'analyzer', label: 'Analyzer Agent', type: 'agent' },
               { id: 'planner', label: 'Planner Agent', type: 'agent' },
+              { id: 'code_gen', label: 'Code Generator', type: 'agent' },
+              { id: 'image_gen', label: 'Image Generator', type: 'agent' },
+              { id: 'evaluator', label: 'Evaluator Agent', type: 'agent' },
               { id: 'ethical_checker', label: 'Ethical Checker', type: 'agent'},
               { id: 'result_synthesizer', label: 'Result Synthesizer', type: 'agent' },
               { id: 'finalOutput', label: 'Final Output', type: 'output' },
@@ -120,28 +134,22 @@ class OrkesConductorClient {
             edges: [
               { id: 'e1', source: 'userInput', target: 'analyzer', animated: true },
               { id: 'e2', source: 'analyzer', target: 'planner', animated: true },
-              { id: 'e3', source: 'planner', target: 'ethical_checker', animated: true },
-              { id: 'e4', source: 'ethical_checker', target: 'result_synthesizer', animated: true },
-              { id: 'e5', source: 'result_synthesizer', target: 'finalOutput', animated: true },
+              { id: 'e3', source: 'planner', target: 'code_gen', animated: true },
+              { id: 'e4', source: 'planner', target: 'image_gen', animated: true },
+              { id: 'e5', source: 'planner', target: 'evaluator', animated: true },
+              { id: 'e6', source: 'code_gen', target: 'ethical_checker', animated: true },
+              { id: 'e7', source: 'image_gen', target: 'ethical_checker', animated: true },
+              { id: 'e8', source: 'evaluator', target: 'ethical_checker', animated: true },
+              { id: 'e9', source: 'ethical_checker', target: 'result_synthesizer', animated: true },
+              { id: 'e10', source: 'result_synthesizer', target: 'finalOutput', animated: true },
             ],
           },
-          // From neuro-synapse-orkes-workflow.yaml for consistency in output structure
-          decomposedTasks: [
-            { id: "analyze_prompt_ref", taskDescription: "Analyze user prompt", assignedAgent: "AnalyzerAgent", status: "COMPLETED", resultSummary: "Prompt analysis complete."},
-            { id: "plan_execution_ref", taskDescription: "Plan execution strategy", assignedAgent: "PlannerAgent", status: "COMPLETED", resultSummary: "Execution plan generated."},
-            { id: "execute_code_gen_ref", taskDescription: "Execute: Code Generation", assignedAgent: "CodeGenerator", status: "COMPLETED", resultSummary: "Mock code generated."},
-            { id: "execute_image_gen_ref", taskDescription: "Execute: Image Generation", assignedAgent: "ImageGenerator", status: "COMPLETED", resultSummary: "Mock image data URI."},
-            { id: "execute_eval_ref", taskDescription: "Execute: Evaluation", assignedAgent: "Evaluator", status: "COMPLETED", resultSummary: "Evaluation complete."},
-            { id: "ethical_check_ref", taskDescription: "Ethical Compliance Check", assignedAgent: "EthicalCheckerAgent", status: "COMPLETED", resultSummary: "Compliance: true. Issues: None"},
-            { id: "synthesize_final_result_ref", taskDescription: "Synthesize Final Result", assignedAgent: "ResultSynthesizerAgent", status: "COMPLETED", resultSummary: "Final answer compiled."}
-          ],
-          workflowExplanation: "Orkes workflow executed: User input analyzed, plan formed, tasks (code, image, eval) forked & joined, ethical check passed, final result synthesized.",
-          toolUsages: [], // Assuming no tools used in this mock completion
+          toolUsages: [], 
           ethicalComplianceDetails: { isCompliant: true, issuesFound: [] },
         };
-         console.log(`[Mock Orkes Client] Workflow ${workflowId} COMPLETED.`);
+         console.log(`[Mock Orkes Client] Workflow ${workflowId} COMPLETED (simulated).`);
       } else if (workflow.status === 'RUNNING') {
-         console.log(`[Mock Orkes Client] Workflow ${workflowId} still RUNNING.`);
+         console.log(`[Mock Orkes Client] Workflow ${workflowId} still RUNNING (simulated).`);
       }
 
 
@@ -184,11 +192,9 @@ export function getOrkesClient(): OrkesConductorClient {
     const keyId = process.env.ORKES_KEY_ID;
     const keySecret = process.env.ORKES_KEY_SECRET;
 
-    if (!serverUrl || !keyId || !keySecret) {
-      console.error("ORKES_SERVER_URL, ORKES_KEY_ID, or ORKES_KEY_SECRET environment variables are not set. Orkes client cannot be initialized for real calls.");
-      // Fallback to a mock client that doesn't need real creds for local dev if needed
-      // For now, it will still use the mock logic within the methods.
-    }
+    // if (!serverUrl || !keyId || !keySecret) {
+    //   console.error("ORKES_SERVER_URL, ORKES_KEY_ID, or ORKES_KEY_SECRET environment variables are not set. Orkes client cannot be initialized for real calls. Using full mock mode.");
+    // }
     
     orkesClientInstance = new OrkesConductorClient({
       serverUrl: serverUrl || "https://play.orkes.io/api", // Default to play for mock
