@@ -28,14 +28,14 @@ const ToolUsageSchema = z.object({ // Keep if agents might still report tool usa
 });
 export type ToolUsage = z.infer<typeof ToolUsageSchema>;
 
-export const NeuroSynapseInputSchema = z.object({
+const NeuroSynapseInputSchema = z.object({
   mainPrompt: z.string().describe('The complex user prompt to be processed by Neuro Synapse.'),
   imageDataUri: z.string().optional().describe("Optional image data for context, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
 });
 export type NeuroSynapseInput = z.infer<typeof NeuroSynapseInputSchema>;
 
 // This output schema should align with what the ResultSynthesizer agent (and Orkes workflow) produces.
-export const NeuroSynapseOutputSchema = z.object({
+const NeuroSynapseOutputSchema = z.object({
   originalPrompt: z.string().describe('The original prompt received from the user.'),
   hasImageContext: z.boolean().describe('Whether image context was provided and considered.'),
   decomposedTasks: z.array(SubTaskSchema).describe('An array of sub-tasks representing Orkes tasks and their status/results.'),
@@ -106,20 +106,31 @@ export async function neuroSynapse(input: NeuroSynapseInput): Promise<NeuroSynap
     // Transform Orkes workflow output to NeuroSynapseOutputSchema
     // The ResultSynthesizer agent's output should ideally match this structure.
     // If not, this is where you'd map it.
-    // The mock Orkes client already produces output somewhat aligned.
     const outputData = workflowExecution.output;
+    
+    // Validate the outputData against NeuroSynapseOutputSchema
+    const validatedOutput = NeuroSynapseOutputSchema.safeParse({
+        originalPrompt: input.mainPrompt,
+        hasImageContext: !!input.imageDataUri,
+        // Ensure all fields are mapped correctly from outputData or provide defaults
+        decomposedTasks: (outputData.decomposedTasks || []).map((task: any) => ({
+            ...task,
+            resultSummary: task.resultSummary === null ? undefined : task.resultSummary, // Handle null explicitly
+        })),
+        synthesizedAnswer: outputData.finalAnswer || "No synthesized answer from workflow.",
+        workflowExplanation: outputData.workflowExplanation || "Workflow executed by Orkes Conductor.",
+        workflowDiagramData: outputData.workflowDiagramData || { nodes: [], edges: [] }, 
+        toolUsages: outputData.toolUsages || [],
+        orkesWorkflowId: workflowId,
+        ethicalComplianceDetails: outputData.ethicalComplianceDetails,
+    });
 
-    return {
-      originalPrompt: input.mainPrompt,
-      hasImageContext: !!input.imageDataUri,
-      decomposedTasks: outputData.decomposedTasks || [], // Assuming ResultSynthesizer provides this
-      synthesizedAnswer: outputData.finalAnswer || "No synthesized answer from workflow.",
-      workflowExplanation: outputData.workflowExplanation || "Workflow executed by Orkes Conductor.",
-      workflowDiagramData: outputData.workflowDiagramData || { nodes: [], edges: [] }, // Crucial for UI
-      toolUsages: outputData.toolUsages || [],
-      orkesWorkflowId: workflowId,
-      ethicalComplianceDetails: outputData.ethicalComplianceDetails,
-    };
+    if (!validatedOutput.success) {
+        console.error("Orkes workflow output validation failed:", validatedOutput.error.issues);
+        throw new Error(`Orkes workflow completed but output validation failed: ${validatedOutput.error.message}`);
+    }
+
+    return validatedOutput.data;
 
   } catch (error: any) {
     console.error("Error in neuroSynapse (Orkes) flow:", error);
@@ -142,6 +153,7 @@ export async function neuroSynapse(input: NeuroSynapseInput): Promise<NeuroSynap
       },
       toolUsages: [],
       orkesWorkflowId: undefined,
+      ethicalComplianceDetails: { error: error.message },
     };
   }
 }
