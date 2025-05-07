@@ -35,13 +35,13 @@ const EthicalComplianceSchema = z.object({
   remediationSuggestions: z.array(z.string()).optional().describe('Suggestions for remediating ethical issues.'),
 });
 
-export const NeuroSynapseInputSchema = z.object({
+const NeuroSynapseInputSchema = z.object({
   mainPrompt: z.string().describe('The complex user prompt to be processed by Neuro Synapse.'),
   imageDataUri: z.string().optional().describe("Optional image data for context, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
 });
 export type NeuroSynapseInput = z.infer<typeof NeuroSynapseInputSchema>;
 
-export const NeuroSynapseOutputSchema = z.object({
+const NeuroSynapseOutputSchema = z.object({
   originalPrompt: z.string().describe('The original prompt received from the user.'),
   hasImageContext: z.boolean().describe('Whether image context was provided and considered.'),
   decomposedTasks: z.array(SubTaskSchema).describe('An array of sub-tasks as planned and simulated by the AI.'),
@@ -81,9 +81,9 @@ const prompt = ai.definePrompt({
 
 3.  **Simulate Execution**:
     *   For each PLANNED sub-task:
-        *   Generate a plausible, concise 'resultSummary' as if the assigned virtual agent completed it. This summary should be a few sentences.
+        *   Generate a plausible, concise 'resultSummary' as if the assigned virtual agent completed it. This summary should be a few sentences. Ensure this field is always a string, e.g., "Task simulation complete." or "Simulation indicated data insufficiency.".
         *   If the task involves simulated tool usage (e.g., a "WebSearcher" agent using a "searchEngine" tool), describe this in 'toolUsages' with 'toolName', 'toolInput' (simulated query), and 'toolOutput' (simulated search results summary).
-        *   Update its 'status' to "SIMULATED_COMPLETE". If simulation is not feasible for a task, mark it "SIMULATED_FAILED" and explain why in the resultSummary.
+        *   Update its 'status' to "SIMULATED_COMPLETE". If simulation is not feasible for a task, mark it "SIMULATED_FAILED" and explain why in the resultSummary. Make sure resultSummary is always a string, even if brief like "Simulation not applicable for this task." if it's SIMULATED_FAILED.
 
 4.  **Perform Ethical Compliance Check**:
     *   Review the original prompt, your plan, and all simulated results.
@@ -105,7 +105,7 @@ const prompt = ai.definePrompt({
         *   Nodes: Include 'input' (for mainPrompt), 'image_input' (if imageDataUri provided), one 'process' node for Neuro Synapse itself, 'agent' nodes for each virtual agent type you assigned, 'tool' nodes if any tools were simulated, and an 'output' node for the final answer.
         *   Edges: Connect nodes logically to show data flow (e.g., input -> Neuro Synapse -> agent-1 -> Neuro Synapse -> output). Ensure all edges have an 'id' and 'animated: true'.
 
-Output MUST be a single JSON object matching the NeuroSynapseOutputSchema.
+Output MUST be a single JSON object matching the NeuroSynapseOutputSchema. Make sure all fields, especially 'resultSummary' within 'decomposedTasks', are present and correctly typed (strings for summaries).
 
 User Prompt: {{{mainPrompt}}}
 {{#if imageDataUri}}Image Provided: Yes (content is embedded above for your analysis).{{else}}Image Provided: No.{{/if}}
@@ -131,10 +131,26 @@ const neuroSynapseFlow = ai.defineFlow(
         throw new Error('Neuro Synapse AI failed to generate a response.');
       }
       
-      console.log("[Neuro Synapse Flow] LLM Output received, validating...");
-      // Ensure originalPrompt and hasImageContext are correctly set from the input
-      const validatedOutput = NeuroSynapseOutputSchema.parse({
+      console.log("[Neuro Synapse Flow] LLM Output received, processing...");
+      
+      const processedOutput = {
         ...llmResponse.output,
+        decomposedTasks: (llmResponse.output.decomposedTasks || []).map(task => ({
+          ...task,
+          // Ensure resultSummary is always a string, even if it was null/undefined from LLM
+          resultSummary: task.resultSummary === null || task.resultSummary === undefined ? "No summary provided." : String(task.resultSummary),
+          // Ensure status is one of the allowed enum values, default to PLANNED if invalid
+          status: ['PLANNED', 'SIMULATED_COMPLETE', 'SIMULATED_FAILED', 'ETHICAL_REVIEW_PENDING'].includes(task.status?.toUpperCase()) 
+                  ? task.status.toUpperCase() as SubTask['status'] 
+                  : 'PLANNED' as SubTask['status'],
+        })),
+         toolUsages: llmResponse.output.toolUsages || [], // Ensure toolUsages is an array
+         ethicalCompliance: llmResponse.output.ethicalCompliance || { isCompliant: false, issuesFound: ["Ethical compliance data missing from LLM response."]},
+      };
+      
+      console.log("[Neuro Synapse Flow] Validating processed output...");
+      const validatedOutput = NeuroSynapseOutputSchema.parse({
+        ...processedOutput,
         originalPrompt: input.mainPrompt,
         hasImageContext: !!input.imageDataUri,
       });
@@ -152,15 +168,15 @@ const neuroSynapseFlow = ai.defineFlow(
         hasImageContext: !!input.imageDataUri,
         decomposedTasks: [{
           id: "error_task",
-          taskDescription: "Neuro Synapse process encountered an critical error.",
+          taskDescription: "Neuro Synapse process encountered a critical error.",
           assignedAgent: "SystemOrchestrator",
-          status: "SIMULATED_FAILED",
+          status: "SIMULATED_FAILED" as const, 
           resultSummary: error.message || "Unknown error during processing.",
         }],
         synthesizedAnswer: `Neuro Synapse process failed: ${error.message || "Unknown error. Please check logs."}`,
         workflowExplanation: `An error occurred within the Neuro Synapse AI orchestrator. Details: ${error.message}`,
         workflowDiagramData: {
-          nodes: [{ id: 'error', label: 'Processing Error', type: 'output' }],
+          nodes: [{ id: 'error', label: 'Processing Error', type: 'output' as const }],
           edges: [],
         },
         toolUsages: [],
