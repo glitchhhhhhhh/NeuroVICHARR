@@ -10,13 +10,12 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "register-orkes-defs": "tsx src/scripts/register-orkes-defs.ts"
+    "register-orkes-defs": "echo \"Orkes Conductor integration has been removed. This script is no longer applicable.\""
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.6.2",
     "@genkit-ai/next": "^1.6.2",
     "@hookform/resolvers": "^4.1.3",
-    "@orkes-org/conductor-javascript": "2.2.1",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
     "@radix-ui/react-avatar": "^1.1.3",
