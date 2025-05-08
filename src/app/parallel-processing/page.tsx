@@ -67,7 +67,7 @@ const getNodeColor = (status: SubTask['status']) => {
   return 'hsl(var(--muted-foreground))';
 };
 
-const TaskNode: React.FC<{ task: SubTask, onClick: () => void, style?: React.CSSProperties }> = ({ task, onClick, style }) => (
+const TaskNode: React.FC<{ task: SubTask, agents: Agent[], onClick: () => void, style?: React.CSSProperties }> = ({ task, agents, onClick, style }) => (
   <motion.div
     layoutId={task.id}
     onClick={onClick}
@@ -109,26 +109,26 @@ const EdgeLine: React.FC<{ sourcePos: { x: number, y: number }, targetPos: { x: 
 
 
 export default function ParallelProcessingCorePage() {
-  const [agents, setAgents] = useState<Agent[]>(() => JSON.parse(JSON.stringify(initialAgents)));
-  const [tasks, setTasks] = useState<SubTask[]>(() => JSON.parse(JSON.stringify(initialTasks)));
+  const [agentsData, setAgentsData] = useState<Agent[]>(() => JSON.parse(JSON.stringify(initialAgents)));
+  const [tasksData, setTasksData] = useState<SubTask[]>(() => JSON.parse(JSON.stringify(initialTasks)));
   const [selectedTask, setSelectedTask] = useState<SubTask | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [simulationTime, setSimulationTime] = useState(0);
 
   const nodePositions = useMemo(() => {
     const positions: { [key: string]: { x: number, y: number, level: number } } = {};
-    if (tasks.length === 0) return positions;
+    if (tasksData.length === 0) return positions;
 
     const levels: string[][] = [];
     const inDegree: { [key: string]: number } = {};
     const graph: { [key: string]: string[] } = {};
 
-    tasks.forEach(task => {
+    tasksData.forEach(task => {
       inDegree[task.id] = 0;
       graph[task.id] = [];
     });
 
-    tasks.forEach(task => {
+    tasksData.forEach(task => {
       task.dependencies.forEach(depId => {
         if (graph[depId]) {
            graph[depId].push(task.id);
@@ -137,7 +137,7 @@ export default function ParallelProcessingCorePage() {
       });
     });
 
-    let queue = tasks.filter(task => inDegree[task.id] === 0).map(t => t.id);
+    let queue = tasksData.filter(task => inDegree[task.id] === 0).map(t => t.id);
     let level = 0;
     while (queue.length > 0) {
       levels[level] = queue;
@@ -175,7 +175,7 @@ export default function ParallelProcessingCorePage() {
     });
 
     let fallbackIndex = 0;
-    tasks.forEach(task => {
+    tasksData.forEach(task => {
         if (!positions[task.id]) {
             const row = Math.floor(fallbackIndex / nodesPerFallbackRow);
             const col = fallbackIndex % nodesPerFallbackRow;
@@ -189,13 +189,13 @@ export default function ParallelProcessingCorePage() {
     });
 
     return positions;
-  }, [tasks]);
+  }, [tasksData]);
 
   const resetSimulation = useCallback(() => {
     setIsRunning(false);
     setSimulationTime(0);
-    setTasks(JSON.parse(JSON.stringify(initialTasks))); 
-    setAgents(JSON.parse(JSON.stringify(initialAgents)));
+    setTasksData(JSON.parse(JSON.stringify(initialTasks))); 
+    setAgentsData(JSON.parse(JSON.stringify(initialAgents)));
     setSelectedTask(null);
   }, []);
 
@@ -205,7 +205,7 @@ export default function ParallelProcessingCorePage() {
       intervalId = setInterval(() => {
         setSimulationTime(prev => prev + 1);
         
-        setTasks(currentTasks => {
+        setTasksData(currentTasks => {
           const updatedTasks = currentTasks.map(task => {
             let newAgentState: Partial<Agent> | null = null;
             let taskUpdate: Partial<SubTask> = {};
@@ -213,7 +213,7 @@ export default function ParallelProcessingCorePage() {
             if (task.status === 'pending') {
               const depsCompleted = task.dependencies.every(depId => currentTasks.find(t => t.id === depId)?.status === 'completed');
               if (depsCompleted) {
-                const availableAgent = agents.find(a => a.status === 'idle' && 
+                const availableAgent = agentsData.find(a => a.status === 'idle' && 
                   ( (task.name.toLowerCase().includes("web") && a.type === 'Web') ||
                     (task.name.toLowerCase().includes("image") && a.type === 'Vision') ||
                     (task.name.toLowerCase().includes("code") && a.type === 'Code') ||
@@ -225,7 +225,7 @@ export default function ParallelProcessingCorePage() {
                 );
                 if (availableAgent) {
                   newAgentState = { status: 'busy', currentTaskId: task.id, messages: [...(availableAgent.messages || []), `Started ${task.name}`]};
-                  setAgents(prevAgents => prevAgents.map(a => a.id === availableAgent.id ? {...a, ...newAgentState } : a));
+                  setAgentsData(prevAgents => prevAgents.map(a => a.id === availableAgent.id ? {...a, ...newAgentState } : a));
                   taskUpdate = { status: 'active', assignedAgentId: availableAgent.id, startTime: simulationTime, progress: 0, confidence: Math.random() * 0.3 };
                 }
               }
@@ -235,27 +235,27 @@ export default function ParallelProcessingCorePage() {
               if (newProgress >= 100) {
                 newProgress = 100;
                 if ((task.name.toLowerCase().includes("validate") || task.name.toLowerCase().includes("review")) && Math.random() < 0.3) {
-                  newAgentState = { messages: [...(agents.find(a => a.id === task.assignedAgentId)?.messages || []), `Debating on ${task.name}...`] };
+                  newAgentState = { messages: [...(agentsData.find(a => a.id === task.assignedAgentId)?.messages || []), `Debating on ${task.name}...`] };
                   taskUpdate = { status: 'debating', progress: newProgress, confidence: Math.min(newConfidence, 1), resultSummary: "Awaiting debate resolution."};
                 } else {
-                  newAgentState = { status: 'idle', currentTaskId: null, messages: [...(agents.find(a => a.id === task.assignedAgentId)?.messages || []), `Completed ${task.name}`] };
+                  newAgentState = { status: 'idle', currentTaskId: null, messages: [...(agentsData.find(a => a.id === task.assignedAgentId)?.messages || []), `Completed ${task.name}`] };
                   taskUpdate = { status: 'completed', endTime: simulationTime, progress: 100, confidence: Math.min(newConfidence, 1), resultSummary: `Output for ${task.name} generated.` };
                 }
                 if (newAgentState && task.assignedAgentId) {
-                    setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, ...newAgentState, utilization: {...a.utilization, cpu: Math.max(5, a.utilization.cpu - 5)}} : a));
+                    setAgentsData(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, ...newAgentState, utilization: {...a.utilization, cpu: Math.max(5, a.utilization.cpu - 5)}} : a));
                 }
               } else {
                 if(Math.random() < 0.1 && task.assignedAgentId) {
-                    setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, messages: [...a.messages, `Update on ${task.name}: ${newProgress.toFixed(0)}% done.`]} : a));
+                    setAgentsData(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, messages: [...a.messages, `Update on ${task.name}: ${newProgress.toFixed(0)}% done.`]} : a));
                 }
                 taskUpdate = { progress: newProgress, confidence: Math.min(newConfidence, 1) };
               }
             } else if (task.status === 'debating') {
               if (Math.random() < 0.4) {
-                newAgentState = { status: 'idle', currentTaskId: null, messages: [...(agents.find(a => a.id === task.assignedAgentId)?.messages || []), `Debate on ${task.name} resolved.`] };
+                newAgentState = { status: 'idle', currentTaskId: null, messages: [...(agentsData.find(a => a.id === task.assignedAgentId)?.messages || []), `Debate on ${task.name} resolved.`] };
                 taskUpdate = { status: 'completed', endTime: simulationTime, confidence: task.confidence + Math.random() * 0.2, resultSummary: `Output for ${task.name} (post-debate).`, conflicts: Math.random() < 0.5 ? ["Minor discrepancy found and resolved."] : undefined };
                  if (newAgentState && task.assignedAgentId) {
-                    setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, ...newAgentState} : a));
+                    setAgentsData(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, ...newAgentState} : a));
                 }
               }
             }
@@ -268,7 +268,7 @@ export default function ParallelProcessingCorePage() {
           return updatedTasks;
         });
 
-        setAgents(currentAgents => currentAgents.map(agent => ({
+        setAgentsData(currentAgents => currentAgents.map(agent => ({
           ...agent,
           utilization: {
             cpu: agent.status === 'busy' ? Math.min(100, agent.utilization.cpu + Math.random() * 5) : Math.max(5, agent.utilization.cpu - Math.random() * 3),
@@ -282,9 +282,9 @@ export default function ParallelProcessingCorePage() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isRunning, simulationTime, agents]); // Removed tasks from dependency array as it's updated inside
+  }, [isRunning, simulationTime, agentsData]); // Removed tasksData from dependency array as it's updated inside
 
-  const allTasksCompleted = tasks.every(t => t.status === 'completed' || t.status === 'failed');
+  const allTasksCompleted = tasksData.every(t => t.status === 'completed' || t.status === 'failed');
 
 
   return (
@@ -340,9 +340,9 @@ export default function ParallelProcessingCorePage() {
                             <path d="M0,-5L10,0L0,5" className="fill-primary/60" />
                             </marker>
                         </defs>
-                        {tasks.map(task => 
+                        {tasksData.map(task => 
                             task.dependencies.map(depId => {
-                            const sourceNode = tasks.find(t => t.id === depId);
+                            const sourceNode = tasksData.find(t => t.id === depId);
                             const sourcePos = sourceNode ? nodePositions[depId] : null;
                             const targetPos = nodePositions[task.id];
                             if (!sourcePos || !targetPos) return null;
@@ -356,10 +356,10 @@ export default function ParallelProcessingCorePage() {
                             })
                         )}
                     </svg>
-                    {tasks.map(task => {
+                    {tasksData.map(task => {
                         const pos = nodePositions[task.id];
                         if (!pos) return <div key={task.id} className="hidden">Error: Node position not found for {task.id}</div>;
-                        return <TaskNode key={task.id} task={task} onClick={() => setSelectedTask(task)} style={{ left: pos.x, top: pos.y }} />;
+                        return <TaskNode key={task.id} task={task} agents={agentsData} onClick={() => setSelectedTask(task)} style={{ left: pos.x, top: pos.y }} />;
                     })}
                   </>
                 ) : (
@@ -386,7 +386,7 @@ export default function ParallelProcessingCorePage() {
                 <CardContent>
                     <ScrollArea className="h-[280px] pr-3">
                         <div className="space-y-3">
-                        {agents.map(agent => (
+                        {agentsData.map(agent => (
                             <motion.div 
                                 key={agent.id}
                                 layout
@@ -401,7 +401,7 @@ export default function ParallelProcessingCorePage() {
                                 {agent.status}
                                 </Badge>
                             </div>
-                            {agent.status === 'busy' && agent.currentTaskId && <p className="text-xs text-muted-foreground truncate">Task: {tasks.find(t=>t.id === agent.currentTaskId)?.name || 'Unknown'}</p>}
+                            {agent.status === 'busy' && agent.currentTaskId && <p className="text-xs text-muted-foreground truncate">Task: {tasksData.find(t=>t.id === agent.currentTaskId)?.name || 'Unknown'}</p>}
                             <div className="grid grid-cols-3 gap-1 text-xs text-muted-foreground mt-1.5">
                                 <span>CPU: {agent.utilization.cpu}%</span>
                                 <span>GPU: {agent.utilization.gpu}%</span>
@@ -442,7 +442,7 @@ export default function ParallelProcessingCorePage() {
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                         <p><strong>ID:</strong> {selectedTask.id}</p>
-                        <p><strong>Assigned Agent:</strong> {selectedTask.assignedAgentId ? agents.find(a => a.id === selectedTask.assignedAgentId)?.name : 'None'}</p>
+                        <p><strong>Assigned Agent:</strong> {selectedTask.assignedAgentId ? agentsData.find(a => a.id === selectedTask.assignedAgentId)?.name : 'None'}</p>
                         <p><strong>Confidence:</strong> {selectedTask.confidence.toFixed(2)}</p>
                         <p><strong>Progress:</strong> {selectedTask.progress}%</p>
                         {selectedTask.startTime !== null && <p><strong>Start Time:</strong> {selectedTask.startTime}s</p>}
@@ -519,3 +519,4 @@ export default function ParallelProcessingCorePage() {
 }
 
     
+
