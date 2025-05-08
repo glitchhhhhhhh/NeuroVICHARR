@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 // Types for mock data
 interface Agent {
@@ -88,7 +89,7 @@ const TaskNode: React.FC<{ task: SubTask, onClick: () => void, style?: React.CSS
         task.status === 'completed' ? 'bg-primary' : task.status === 'active' ? 'bg-accent' : task.status === 'failed' ? 'bg-destructive' : 'bg-muted-foreground'
     )} />
     <p className="text-[10px] text-muted-foreground">Conf: {task.confidence.toFixed(2)}</p>
-    {task.assignedAgentId && <p className="text-[10px] text-muted-foreground truncate">Agent: {task.assignedAgentId.split('-')[1]}</p>}
+    {task.assignedAgentId && <p className="text-[10px] text-muted-foreground truncate">Agent: {agents.find(a => a.id === task.assignedAgentId)?.name.split(' ')[0] || task.assignedAgentId.split('-')[1]}</p>}
   </motion.div>
 );
 
@@ -108,14 +109,16 @@ const EdgeLine: React.FC<{ sourcePos: { x: number, y: number }, targetPos: { x: 
 
 
 export default function ParallelProcessingCorePage() {
-  const [agents, setAgents] = useState<Agent[]>(initialAgents);
-  const [tasks, setTasks] = useState<SubTask[]>(initialTasks);
+  const [agents, setAgents] = useState<Agent[]>(() => JSON.parse(JSON.stringify(initialAgents)));
+  const [tasks, setTasks] = useState<SubTask[]>(() => JSON.parse(JSON.stringify(initialTasks)));
   const [selectedTask, setSelectedTask] = useState<SubTask | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [simulationTime, setSimulationTime] = useState(0);
 
   const nodePositions = useMemo(() => {
     const positions: { [key: string]: { x: number, y: number, level: number } } = {};
+    if (tasks.length === 0) return positions;
+
     const levels: string[][] = [];
     const inDegree: { [key: string]: number } = {};
     const graph: { [key: string]: string[] } = {};
@@ -140,7 +143,7 @@ export default function ParallelProcessingCorePage() {
       levels[level] = queue;
       const nextQueue: string[] = [];
       for (const u of queue) {
-        graph[u].forEach(v => {
+        graph[u]?.forEach(v => { // Added null check for graph[u]
           inDegree[v]--;
           if (inDegree[v] === 0) {
             nextQueue.push(v);
@@ -151,28 +154,39 @@ export default function ParallelProcessingCorePage() {
       level++;
     }
     
-    // Simple layout: equally spaced horizontally within levels, levels spaced vertically
     const nodeWidth = 160;
     const nodeHeight = 90;
     const horizontalGap = 50;
     const verticalGap = 80;
     const diagramPadding = 20;
+    const nodesPerFallbackRow = 4;
+
 
     levels.forEach((levelTasks, lvlIdx) => {
+      const maxNodesInAnyLevel = levels.reduce((max, l) => Math.max(max, l.length), 0);
+      const totalDiagramWidth = maxNodesInAnyLevel * (nodeWidth + horizontalGap) - horizontalGap;
       const levelWidth = levelTasks.length * (nodeWidth + horizontalGap) - horizontalGap;
-      let currentX = diagramPadding + ( (levels.reduce((max, l) => Math.max(max, l.length), 0) * (nodeWidth + horizontalGap) - horizontalGap) - levelWidth) / 2; // Center level
+      let currentX = diagramPadding + (totalDiagramWidth - levelWidth) / 2; 
+      
       levelTasks.forEach(taskId => {
         positions[taskId] = { x: currentX, y: diagramPadding + lvlIdx * (nodeHeight + verticalGap), level: lvlIdx };
         currentX += nodeWidth + horizontalGap;
       });
     });
-     // Fallback for any nodes missed (e.g. cycles, though this simple layout doesn't handle them well)
+
+    let fallbackIndex = 0;
     tasks.forEach(task => {
         if (!positions[task.id]) {
-            positions[task.id] = { x: Math.random() * 600 + 50, y: Math.random() * 400 + 50, level: levels.length };
+            const row = Math.floor(fallbackIndex / nodesPerFallbackRow);
+            const col = fallbackIndex % nodesPerFallbackRow;
+            const x = diagramPadding + col * (nodeWidth + horizontalGap);
+            // Ensure fallback nodes are placed below the layered nodes
+            const yOffset = (levels.length > 0 ? levels.length : 1) * (nodeHeight + verticalGap);
+            const y = diagramPadding + yOffset + row * (nodeHeight + verticalGap);
+            positions[task.id] = { x, y, level: levels.length + row };
+            fallbackIndex++;
         }
     });
-
 
     return positions;
   }, [tasks]);
@@ -180,65 +194,80 @@ export default function ParallelProcessingCorePage() {
   const resetSimulation = useCallback(() => {
     setIsRunning(false);
     setSimulationTime(0);
-    setTasks(JSON.parse(JSON.stringify(initialTasks))); // Deep copy
+    setTasks(JSON.parse(JSON.stringify(initialTasks))); 
     setAgents(JSON.parse(JSON.stringify(initialAgents)));
     setSelectedTask(null);
   }, []);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let intervalId: NodeJS.Timeout | undefined = undefined;
     if (isRunning) {
-      interval = setInterval(() => {
+      intervalId = setInterval(() => {
         setSimulationTime(prev => prev + 1);
-        // Simulate task progress and agent activity
-        setTasks(currentTasks => currentTasks.map(task => {
-          if (task.status === 'pending') {
-            const depsCompleted = task.dependencies.every(depId => currentTasks.find(t => t.id === depId)?.status === 'completed');
-            if (depsCompleted) {
-              const availableAgent = agents.find(a => a.status === 'idle' && 
-                ( (task.name.toLowerCase().includes("web") && a.type === 'Web') ||
-                  (task.name.toLowerCase().includes("image") && a.type === 'Vision') ||
-                  (task.name.toLowerCase().includes("code") && a.type === 'Code') ||
-                  (task.name.toLowerCase().includes("draft") && a.type === 'LLM') ||
-                  (task.name.toLowerCase().includes("validate") && a.type === 'Evaluator') ||
-                  (!task.name.toLowerCase().includes("web") && !task.name.toLowerCase().includes("image") && !task.name.toLowerCase().includes("code") && !task.name.toLowerCase().includes("draft") && !task.name.toLowerCase().includes("validate")) 
-                )
-              );
-              if (availableAgent) {
-                setAgents(prevAgents => prevAgents.map(a => a.id === availableAgent.id ? {...a, status: 'busy', currentTaskId: task.id, messages: [...a.messages, `Started ${task.name}`]} : a));
-                return { ...task, status: 'active', assignedAgentId: availableAgent.id, startTime: simulationTime, progress: 0, confidence: Math.random() * 0.3 };
+        
+        setTasks(currentTasks => {
+          const updatedTasks = currentTasks.map(task => {
+            let newAgentState: Partial<Agent> | null = null;
+            let taskUpdate: Partial<SubTask> = {};
+
+            if (task.status === 'pending') {
+              const depsCompleted = task.dependencies.every(depId => currentTasks.find(t => t.id === depId)?.status === 'completed');
+              if (depsCompleted) {
+                const availableAgent = agents.find(a => a.status === 'idle' && 
+                  ( (task.name.toLowerCase().includes("web") && a.type === 'Web') ||
+                    (task.name.toLowerCase().includes("image") && a.type === 'Vision') ||
+                    (task.name.toLowerCase().includes("code") && a.type === 'Code') ||
+                    (task.name.toLowerCase().includes("draft") && a.type === 'LLM') ||
+                    (task.name.toLowerCase().includes("validate") && a.type === 'Evaluator') ||
+                    // Fallback: any agent type if not specific
+                    (!task.name.toLowerCase().includes("web") && !task.name.toLowerCase().includes("image") && !task.name.toLowerCase().includes("code") && !task.name.toLowerCase().includes("draft") && !task.name.toLowerCase().includes("validate")) 
+                  )
+                );
+                if (availableAgent) {
+                  newAgentState = { status: 'busy', currentTaskId: task.id, messages: [...(availableAgent.messages || []), `Started ${task.name}`]};
+                  setAgents(prevAgents => prevAgents.map(a => a.id === availableAgent.id ? {...a, ...newAgentState } : a));
+                  taskUpdate = { status: 'active', assignedAgentId: availableAgent.id, startTime: simulationTime, progress: 0, confidence: Math.random() * 0.3 };
+                }
+              }
+            } else if (task.status === 'active') {
+              let newProgress = task.progress + Math.random() * 15;
+              let newConfidence = task.confidence + Math.random() * 0.1;
+              if (newProgress >= 100) {
+                newProgress = 100;
+                if ((task.name.toLowerCase().includes("validate") || task.name.toLowerCase().includes("review")) && Math.random() < 0.3) {
+                  newAgentState = { messages: [...(agents.find(a => a.id === task.assignedAgentId)?.messages || []), `Debating on ${task.name}...`] };
+                  taskUpdate = { status: 'debating', progress: newProgress, confidence: Math.min(newConfidence, 1), resultSummary: "Awaiting debate resolution."};
+                } else {
+                  newAgentState = { status: 'idle', currentTaskId: null, messages: [...(agents.find(a => a.id === task.assignedAgentId)?.messages || []), `Completed ${task.name}`] };
+                  taskUpdate = { status: 'completed', endTime: simulationTime, progress: 100, confidence: Math.min(newConfidence, 1), resultSummary: `Output for ${task.name} generated.` };
+                }
+                if (newAgentState && task.assignedAgentId) {
+                    setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, ...newAgentState, utilization: {...a.utilization, cpu: Math.max(5, a.utilization.cpu - 5)}} : a));
+                }
+              } else {
+                if(Math.random() < 0.1 && task.assignedAgentId) {
+                    setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, messages: [...a.messages, `Update on ${task.name}: ${newProgress.toFixed(0)}% done.`]} : a));
+                }
+                taskUpdate = { progress: newProgress, confidence: Math.min(newConfidence, 1) };
+              }
+            } else if (task.status === 'debating') {
+              if (Math.random() < 0.4) {
+                newAgentState = { status: 'idle', currentTaskId: null, messages: [...(agents.find(a => a.id === task.assignedAgentId)?.messages || []), `Debate on ${task.name} resolved.`] };
+                taskUpdate = { status: 'completed', endTime: simulationTime, confidence: task.confidence + Math.random() * 0.2, resultSummary: `Output for ${task.name} (post-debate).`, conflicts: Math.random() < 0.5 ? ["Minor discrepancy found and resolved."] : undefined };
+                 if (newAgentState && task.assignedAgentId) {
+                    setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, ...newAgentState} : a));
+                }
               }
             }
-          } else if (task.status === 'active') {
-            let newProgress = task.progress + Math.random() * 15;
-            let newConfidence = task.confidence + Math.random() * 0.1;
-            if (newProgress >= 100) {
-              newProgress = 100;
-              // Simulate debate/conflict
-              if (task.name.toLowerCase().includes("validate") || task.name.toLowerCase().includes("review")) {
-                 if (Math.random() < 0.3) { // 30% chance of entering debate
-                    setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, messages: [...a.messages, `Debating on ${task.name}...`]} : a));
-                    return {...task, status: 'debating', progress: newProgress, confidence: Math.min(newConfidence, 1), resultSummary: "Awaiting debate resolution."};
-                 }
-              }
-              
-              setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, status: 'idle', currentTaskId: null, utilization: {...a.utilization, cpu: Math.max(5, a.utilization.cpu - 5)}, messages: [...a.messages, `Completed ${task.name}`] } : a));
-              return { ...task, status: 'completed', endTime: simulationTime, progress: 100, confidence: Math.min(newConfidence, 1), resultSummary: `Output for ${task.name} generated.` };
-            }
-            // Simulate agent sending a message
-            if(Math.random() < 0.1) {
-                setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, messages: [...a.messages, `Update on ${task.name}: ${newProgress.toFixed(0)}% done.`]} : a));
-            }
-            return { ...task, progress: newProgress, confidence: Math.min(newConfidence, 1) };
-          } else if (task.status === 'debating') {
-            // Simulate debate resolution
-            if (Math.random() < 0.4) {
-                setAgents(prevAgents => prevAgents.map(a => a.id === task.assignedAgentId ? {...a, status: 'idle', currentTaskId: null, messages: [...a.messages, `Debate on ${task.name} resolved.`] } : a));
-                return { ...task, status: 'completed', endTime: simulationTime, confidence: task.confidence + Math.random() * 0.2, resultSummary: `Output for ${task.name} (post-debate).`, conflicts: Math.random() < 0.5 ? ["Minor discrepancy found and resolved."] : undefined };
-            }
+            return { ...task, ...taskUpdate };
+          });
+
+          if (updatedTasks.every(t => t.status === 'completed' || t.status === 'failed')) {
+            setIsRunning(false);
           }
-          return task;
-        }));
+          return updatedTasks;
+        });
+
         setAgents(currentAgents => currentAgents.map(agent => ({
           ...agent,
           utilization: {
@@ -248,14 +277,12 @@ export default function ParallelProcessingCorePage() {
           }
         })));
 
-        if (tasks.every(t => t.status === 'completed' || t.status === 'failed')) {
-            setIsRunning(false);
-        }
-
       }, 1000);
     }
-    return () => clearInterval(interval);
-  }, [isRunning, simulationTime, agents, tasks]);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isRunning, simulationTime, agents]); // Removed tasks from dependency array as it's updated inside
 
   const allTasksCompleted = tasks.every(t => t.status === 'completed' || t.status === 'failed');
 
@@ -281,7 +308,7 @@ export default function ParallelProcessingCorePage() {
             </p>
         </div>
          <div className="flex gap-4 pt-4">
-            <Button size="lg" onClick={() => setIsRunning(!isRunning)} disabled={allTasksCompleted && isRunning} className="text-lg px-8 py-6 shadow-md hover:shadow-lg transition-all transform hover:scale-105">
+            <Button size="lg" onClick={() => setIsRunning(prev => !prev)} disabled={allTasksCompleted && isRunning} className="text-lg px-8 py-6 shadow-md hover:shadow-lg transition-all transform hover:scale-105">
               {isRunning ? <><Pause className="mr-2 h-5 w-5" /> Pause Simulation</> : <><Play className="mr-2 h-5 w-5" /> Start Simulation</>}
             </Button>
             <Button size="lg" variant="outline" onClick={resetSimulation} className="text-lg px-8 py-6 shadow-md hover:shadow-lg transition-all transform hover:scale-105">
@@ -305,34 +332,41 @@ export default function ParallelProcessingCorePage() {
                     <CardDescription className="text-base text-muted-foreground">Live visualization of subtask deconstruction, dependencies, and parallel execution.</CardDescription>
                 </CardHeader>
                 <CardContent className="relative h-[550px]"> {/* Ensure content area has height for absolute positioning */}
-                 <svg width="100%" height="100%" className="absolute top-0 left-0 pointer-events-none">
-                    <defs>
-                        <marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
-                        <path d="M0,-5L10,0L0,5" className="fill-primary/60" />
-                        </marker>
-                    </defs>
-                    {tasks.map(task => 
-                        task.dependencies.map(depId => {
-                        const sourceNode = tasks.find(t => t.id === depId);
-                        const sourcePos = sourceNode ? nodePositions[depId] : null;
-                        const targetPos = nodePositions[task.id];
-                        if (!sourcePos || !targetPos) return null;
-                        
-                        // Adjust positions for node centers
-                        const sx = sourcePos.x + 160 / 2; // nodeWidth / 2
-                        const sy = sourcePos.y + 90 / 2;  // nodeHeight / 2
-                        const tx = targetPos.x + 160 / 2;
-                        const ty = targetPos.y + 90 / 2;
+                {Object.keys(nodePositions).length > 0 ? (
+                  <>
+                    <svg width="100%" height="100%" className="absolute top-0 left-0 pointer-events-none">
+                        <defs>
+                            <marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+                            <path d="M0,-5L10,0L0,5" className="fill-primary/60" />
+                            </marker>
+                        </defs>
+                        {tasks.map(task => 
+                            task.dependencies.map(depId => {
+                            const sourceNode = tasks.find(t => t.id === depId);
+                            const sourcePos = sourceNode ? nodePositions[depId] : null;
+                            const targetPos = nodePositions[task.id];
+                            if (!sourcePos || !targetPos) return null;
+                            
+                            const sx = sourcePos.x + 160 / 2; 
+                            const sy = sourcePos.y + 90 / 2;  
+                            const tx = targetPos.x + 160 / 2;
+                            const ty = targetPos.y + 90 / 2;
 
-                        return <EdgeLine key={`${depId}-${task.id}`} sourcePos={{x: sx, y: sy}} targetPos={{x: tx, y: ty}} isCompleted={sourceNode?.status === 'completed'} />;
-                        })
-                    )}
-                 </svg>
-                  {tasks.map(task => {
-                    const pos = nodePositions[task.id];
-                    if (!pos) return null;
-                    return <TaskNode key={task.id} task={task} onClick={() => setSelectedTask(task)} style={{ left: pos.x, top: pos.y }} />;
-                  })}
+                            return <EdgeLine key={`${depId}-${task.id}`} sourcePos={{x: sx, y: sy}} targetPos={{x: tx, y: ty}} isCompleted={sourceNode?.status === 'completed'} />;
+                            })
+                        )}
+                    </svg>
+                    {tasks.map(task => {
+                        const pos = nodePositions[task.id];
+                        if (!pos) return <div key={task.id} className="hidden">Error: Node position not found for {task.id}</div>;
+                        return <TaskNode key={task.id} task={task} onClick={() => setSelectedTask(task)} style={{ left: pos.x, top: pos.y }} />;
+                    })}
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                    Initializing graph...
+                  </div>
+                )}
                 </CardContent>
             </Card>
         </motion.div>
@@ -408,7 +442,7 @@ export default function ParallelProcessingCorePage() {
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                         <p><strong>ID:</strong> {selectedTask.id}</p>
-                        <p><strong>Assigned Agent:</strong> {selectedTask.assignedAgentId || 'None'}</p>
+                        <p><strong>Assigned Agent:</strong> {selectedTask.assignedAgentId ? agents.find(a => a.id === selectedTask.assignedAgentId)?.name : 'None'}</p>
                         <p><strong>Confidence:</strong> {selectedTask.confidence.toFixed(2)}</p>
                         <p><strong>Progress:</strong> {selectedTask.progress}%</p>
                         {selectedTask.startTime !== null && <p><strong>Start Time:</strong> {selectedTask.startTime}s</p>}
