@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"; // Kept for potential future use
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { BrainCircuit, ChevronRight, Loader2, AlertCircle, Wand2, Info, HelpCircle, Search, LinkIcon, FileText, Settings2, Copy, Check, UserCircle, Activity } from "lucide-react";
+import { BrainCircuit, ChevronRight, Loader2, AlertCircle, Wand2, Info, HelpCircle, Search, LinkIcon, FileText, Settings2, Copy, Check, UserCircle, Activity, MessageSquare } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { interpretUserIntent, type InterpretUserIntentOutput, type UserContext } from '@/ai/flows/interpret-user-intent-flow';
 import { Separator } from '@/components/ui/separator';
@@ -16,7 +16,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import Link from "next/link";
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -435,16 +434,9 @@ export default function NeuralInterfacePage() {
             <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground/95">Understanding the Neural Interface</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-             <div className="flex justify-center my-5">
-              <Image 
-                src="https://picsum.photos/600/300?random=10" 
-                alt="Abstract Neural Network Visualization" 
-                width={600} 
-                height={300} 
-                className="rounded-xl shadow-lg object-cover border-2 border-accent/20"
-                data-ai-hint="neural network"
-              />
-            </div>
+             <div className="flex justify-center my-5 p-6 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl border border-primary/20">
+                <MessageSquare className="w-24 h-24 text-primary opacity-60" />
+             </div>
             <div className="prose prose-sm sm:prose dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
              <p>
                The Neural Interface aims to provide a more intuitive way to interact with complex AI systems. 
