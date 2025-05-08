@@ -1,3 +1,5 @@
+'use client';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchCode, GitFork, Brain, Users, Target } from "lucide-react";
 import { motion } from "framer-motion";
