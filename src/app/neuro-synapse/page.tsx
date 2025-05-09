@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, type FormEvent, useEffect, useMemo, ChangeEvent } from 'react';
@@ -704,17 +705,25 @@ export default function NeuroSynapsePage() {
             <div className="flex flex-col md:flex-row gap-8 items-center">
                 <div className="flex-1 text-muted-foreground text-base leading-relaxed prose prose-base dark:prose-invert max-w-none">
                     <p>Neuro Synapse, in this demonstration, showcases a cognitively inspired AI orchestration process. When you submit a prompt, Neuro Synapse initiates a simulated workflow using Genkit and LLMs:</p>
-                    <p>
-                      <strong>1. Prompt Analysis & Planning:</strong> An LLM analyzes your prompt (and image/user context if provided) to deconstruct it into logical sub-tasks and devise a high-level plan.
-                      <strong>2. Simulated Agent Execution:</strong> Each sub-task is "assigned" to a conceptual agent type (e.g., TextGenerator, ImageGenerator, WebBrowser). For this demo, these agents are simulated by:
-                        <ul className="list-disc list-inside ml-4 my-2">
-                            <li>Invoking specific Genkit flows (like `generateImage` or `summarizeWebPage`).</li>
-                            <li>Calling dedicated Genkit prompts for tasks like text generation, code generation, or image analysis.</li>
-                            <li>Utilizing services like `browseWebPage` for web content.</li>
-                        </ul>
-                      <strong>3. Ethical Review:</strong> Another LLM prompt reviews the generated content and original prompt for ethical compliance.
-                      <strong>4. Result Synthesis:</strong> A final LLM prompt takes all outputs, the ethical review, and the original request to compile a comprehensive, synthesized answer and an explanation of the simulated workflow.
-                    </p>
+                    <ol className="list-decimal list-outside ml-5 space-y-2">
+                        <li>
+                            <strong>Prompt Analysis &amp; Planning:</strong> An LLM analyzes your prompt (and image/user context if provided) to deconstruct it into logical sub-tasks and devise a high-level plan.
+                        </li>
+                        <li>
+                            <strong>Simulated Agent Execution:</strong> Each sub-task is "assigned" to a conceptual agent type (e.g., TextGenerator, ImageGenerator, WebBrowser). For this demo, these agents are simulated by:
+                            <ul className="list-disc list-inside ml-4 my-2">
+                                <li>Invoking specific Genkit flows (like `generateImage` or `summarizeWebPage`).</li>
+                                <li>Calling dedicated Genkit prompts for tasks like text generation, code generation, or image analysis.</li>
+                                <li>Utilizing services like `browseWebPage` for web content.</li>
+                            </ul>
+                        </li>
+                        <li>
+                            <strong>Ethical Review:</strong> Another LLM prompt reviews the generated content and original prompt for ethical compliance.
+                        </li>
+                        <li>
+                            <strong>Result Synthesis:</strong> A final LLM prompt takes all outputs, the ethical review, and the original request to compile a comprehensive, synthesized answer and an explanation of the simulated workflow.
+                        </li>
+                    </ol>
                     <p>The dashboard visualizes this simulated orchestration, providing transparency into the AI's "thought process." The "Mind Prompt" feature further enhances this by suggesting tasks based on your (simulated) digital footprint.</p>
                 </div>
                 <motion.div className="flex-shrink-0 w-full md:w-1/3" initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}} transition={{delay:0.2, duration:0.5}}>
@@ -730,3 +739,4 @@ export default function NeuroSynapsePage() {
     </div>
   );
 }
+
