@@ -46,25 +46,30 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname === '/signup'; 
-  const [isLoadingPage, setIsLoadingPage] = useState(true); // Start with loading true
+  const [isLoadingPage, setIsLoadingPage] = useState(false); // Initialize to false to prevent hydration mismatch
 
   useEffect(() => {
-    // If not an auth page, manage loading state for page transitions
     if (!isAuthPage) {
-      setIsLoadingPage(true); // Set loading true when pathname changes (triggers on new page load)
+      // For initial load or route changes, briefly show loader
+      // This will run after initial hydration
+      setIsLoadingPage(true); 
+
+      // Fallback timer to hide loader if onAnimationComplete doesn't fire for some reason
+      // Primary mechanism is onAnimationComplete of the motion.div wrapping children
       const timer = setTimeout(() => {
-         // Fallback to hide loader if onAnimationComplete doesn't fire quickly enough
-         // or if a page doesn't have the motion.div expected for onAnimationComplete
-         if (isLoadingPage) setIsLoadingPage(false);
-      }, 2500); // Increased fallback timeout
+        setIsLoadingPage(currentIsLoading => {
+          // Only set to false if it's still true (e.g., animation didn't complete or component unmounted)
+          if (currentIsLoading) return false;
+          return currentIsLoading; 
+        });
+      }, 3000); // Increased fallback, adjust as necessary
 
       return () => clearTimeout(timer);
     } else {
-      // For auth pages, typically want them to appear quickly without this specific loader
+      // For auth pages, ensure loader is not shown after initial checks
       setIsLoadingPage(false); 
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, isAuthPage]); // Rerun effect if pathname or isAuthPage status changes
+  }, [pathname, isAuthPage]); 
 
 
   if (isAuthPage) {
@@ -74,7 +79,7 @@ export default function RootLayout({
           <title>{String(metadataObject.title)}</title> 
           <meta name="description" content={String(metadataObject.description)} />
         </head>
-        <body className={`${inter.variable} font-sans antialiased`}>
+        <body className={`${inter.variable} font-sans antialiased animated-bg-pattern`}>
            <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -91,7 +96,7 @@ export default function RootLayout({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    onAnimationComplete={() => {if(isAuthPage) setIsLoadingPage(false)}} // Ensure loader hides for auth page animations
+                    onAnimationComplete={() => {if(isAuthPage) setIsLoadingPage(false)}} 
                     className="w-full max-w-md" 
                     >
                     {children}
@@ -111,7 +116,6 @@ export default function RootLayout({
       <head>
         <title>{String(metadataObject.title)}</title>
         <meta name="description" content={String(metadataObject.description)} />
-        {/* <link rel="icon" href="/favicon.ico" sizes="any" /> Favicon handled by Next.js file convention */}
       </head>
       <body className={`${inter.variable} font-sans antialiased animated-bg-pattern`}> 
         <ThemeProvider
@@ -126,7 +130,7 @@ export default function RootLayout({
               <SidebarHeader className="p-4">
                 <div className="flex items-center justify-between">
                   <Link href="/" className="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar-background rounded-md outline-none">
-                    <AppLogo className="w-10 h-10" /> {/* Slightly larger logo */}
+                    <AppLogo className="w-10 h-10" /> 
                     <h1 className="text-2xl font-semibold tracking-tight">NeuroVichar</h1>
                   </Link>
                   <SidebarTrigger className="hidden md:flex" />
@@ -252,7 +256,6 @@ export default function RootLayout({
               </SidebarFooter>
             </Sidebar>
             <SidebarInset className="sidebar-inset-content relative">
-              {/* The main content area background is styled via globals.css */}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}
