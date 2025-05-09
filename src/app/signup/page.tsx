@@ -6,15 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
-export default function LoginPage() {
+export default function SignupPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -24,27 +26,32 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
 
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      setIsLoading(false);
+      toast({
+        title: "Signup Error",
+        description: "Passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    if (email === 'user@neurovichar.ai' && password === 'password') {
-      toast({
-        title: "Login Successful!",
-        description: "Welcome back to NeuroVichar.",
-      });
-      // In a real app, you would redirect or set auth state here
-      // For demo, we'll just clear the form
-      setEmail('');
-      setPassword('');
-    } else {
-      setError('Invalid email or password. Please try again.');
-      toast({
-        title: "Login Failed",
-        description: "Invalid email or password.",
-        variant: "destructive",
-      });
-    }
+    // Simulate successful signup
+    toast({
+      title: "Signup Successful!",
+      description: "Your account has been created. Please login.",
+    });
+    // In a real app, you would redirect to login or dashboard
+    setName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
     setIsLoading(false);
+    // router.push('/login'); // Example redirect using Next.js router if available
   };
 
   return (
@@ -55,10 +62,10 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="flex flex-col items-center text-center space-y-3"
       >
-        <LogIn className="w-20 h-20 text-accent drop-shadow-lg" />
-        <h1 className="text-5xl font-bold tracking-tight text-foreground">Sign In to NeuroVichar</h1>
+        <UserPlus className="w-20 h-20 text-accent drop-shadow-lg" />
+        <h1 className="text-5xl font-bold tracking-tight text-foreground">Create Account</h1>
         <p className="text-xl text-muted-foreground max-w-md">
-          Access your personalized AI dashboard and unlock powerful features.
+          Join NeuroVichar and start exploring the future of AI.
         </p>
       </motion.header>
 
@@ -70,13 +77,29 @@ export default function LoginPage() {
       >
         <Card className="shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 bg-card/85 backdrop-blur-md border-primary/20">
           <CardHeader>
-            <CardTitle className="text-3xl text-center font-semibold text-foreground/95">Welcome Back</CardTitle>
+            <CardTitle className="text-3xl text-center font-semibold text-foreground/95">Sign Up</CardTitle>
             <CardDescription className="text-base text-center text-muted-foreground">
-              Enter your credentials to continue.
+              Fill in the details below to create your account.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name-input" className="text-md font-medium text-foreground/80 flex items-center">
+                  <UserPlus className="w-4 h-4 mr-2 opacity-70" /> Full Name
+                </Label>
+                <Input
+                  id="name-input"
+                  type="text"
+                  placeholder="Your Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isLoading}
+                  required
+                  className="text-lg p-4 h-14 bg-background/60 focus:bg-background focus:ring-accent focus:border-accent text-foreground/90 placeholder-muted-foreground/70 rounded-lg shadow-inner"
+                  aria-label="Full Name"
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email-input" className="text-md font-medium text-foreground/80 flex items-center">
                   <Mail className="w-4 h-4 mr-2 opacity-70" /> Email Address
@@ -109,16 +132,27 @@ export default function LoginPage() {
                   aria-label="Password"
                 />
               </div>
-              <div className="flex items-center justify-end">
-                <Button variant="link" size="sm" asChild className="text-sm text-accent hover:text-accent/80 p-0">
-                  <Link href="#">Forgot password?</Link>
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password-input" className="text-md font-medium text-foreground/80 flex items-center">
+                  <Lock className="w-4 h-4 mr-2 opacity-70" /> Confirm Password
+                </Label>
+                <Input
+                  id="confirm-password-input"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isLoading}
+                  required
+                  className="text-lg p-4 h-14 bg-background/60 focus:bg-background focus:ring-accent focus:border-accent text-foreground/90 placeholder-muted-foreground/70 rounded-lg shadow-inner"
+                  aria-label="Confirm Password"
+                />
               </div>
               {error && (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 200, damping: 15 }}>
                   <Alert variant="destructive" className="shadow-md">
                     <AlertCircle className="h-5 w-5" />
-                    <AlertTitle className="font-semibold">Login Error</AlertTitle>
+                    <AlertTitle className="font-semibold">Signup Error</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 </motion.div>
@@ -134,19 +168,19 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2.5 h-6 w-6 animate-spin" />
-                    Signing In...
+                    Creating Account...
                   </>
                 ) : (
                   <>
-                    <LogIn className="mr-2.5 h-6 w-6" />
-                    Sign In
+                    <UserPlus className="mr-2.5 h-6 w-6" />
+                    Sign Up
                   </>
                 )}
               </Button>
               <p className="text-sm text-muted-foreground">
-                Don&apos;t have an account?{' '}
+                Already have an account?{' '}
                 <Button variant="link" asChild className="text-accent hover:text-accent/80 p-0">
-                  <Link href="/signup">Sign Up</Link>
+                  <Link href="/login">Sign In</Link>
                 </Button>
               </p>
             </CardFooter>

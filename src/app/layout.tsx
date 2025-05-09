@@ -1,10 +1,11 @@
+
 'use client';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google'; 
 import './globals.css';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn, BrainCircuit, Sparkles, Rocket } from 'lucide-react';
+import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn, BrainCircuit, Sparkles, Rocket, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
@@ -45,7 +46,7 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname === '/signup'; 
-  const [isLoadingPage, setIsLoadingPage] = useState(true); // Start with loading true for initial load
+  const [isLoadingPage, setIsLoadingPage] = useState(true); 
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
 
@@ -55,7 +56,7 @@ export default function RootLayout({
        const initialTimer = setTimeout(() => {
          setIsLoadingPage(false);
          setInitialLoadComplete(true);
-       }, 500); // Shortened initial loading time to 0.5s
+       }, 300); // Shortened initial loading time
        return () => clearTimeout(initialTimer);
     }
   }, [initialLoadComplete]);
@@ -63,14 +64,12 @@ export default function RootLayout({
   useEffect(() => {
     if (initialLoadComplete && !isAuthPage) {
       setIsLoadingPage(true);
-      // The loading state will be turned off by onAnimationComplete in the motion.div for content
-      // Fallback timer to hide loader if animation doesn't complete for some reason
       const fallbackTimer = setTimeout(() => {
         setIsLoadingPage(false);
-      }, 1200); // Fallback if page content animation takes too long
+      }, 800); // Fallback if page content animation takes too long
       return () => clearTimeout(fallbackTimer);
     } else if (isAuthPage) {
-      setIsLoadingPage(false); // No loading screen for auth pages after initial load
+      setIsLoadingPage(false); 
     }
   }, [pathname, isAuthPage, initialLoadComplete]);
 
@@ -82,14 +81,14 @@ export default function RootLayout({
           <title>{String(metadataObject.title)}</title> 
           <meta name="description" content={String(metadataObject.description)} />
         </head>
-        <body className={`${inter.variable} font-sans antialiased`}> {/* Removed animated-bg-pattern for auth pages */}
+        <body className={`${inter.variable} font-sans antialiased`}>
            <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
           >
-            {isLoadingPage && <NeuroVicharLoadingLogo text="Loading Authentication..." />}
+            {isLoadingPage && <NeuroVicharLoadingLogo text={pathname === '/login' ? "Loading Authentication..." : "Loading Account Creation..."} />}
             <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/20 dark:from-background dark:to-muted/10 p-4">
                 <AnimatePresence mode="wait">
                     <motion.div
@@ -119,7 +118,7 @@ export default function RootLayout({
         <title>{String(metadataObject.title)}</title>
         <meta name="description" content={String(metadataObject.description)} />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}> {/* Main background pattern applied globally in globals.css */}
+      <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -159,7 +158,7 @@ export default function RootLayout({
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="Neural Interface" size="lg">
                       <Link href="/neural-interface">
-                         <BrainCircuit /> {/* Changed icon */}
+                         <BrainCircuit /> 
                         <span>Neural Interface</span>
                       </Link>
                     </SidebarMenuButton>
@@ -249,6 +248,14 @@ export default function RootLayout({
                         </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
+                     <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Sign Up" size="lg">
+                        <Link href="/signup">
+                            <UserPlus />
+                            <span>Sign Up</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarMenu>
               </SidebarContent>
@@ -257,16 +264,15 @@ export default function RootLayout({
                 <UserNav />
               </SidebarFooter>
             </Sidebar>
-            <SidebarInset className="sidebar-inset-content relative"> {/* Added relative for potential pseudo-elements */}
-               {/* This div will have the animated background pattern via globals.css */}
+            <SidebarInset className="sidebar-inset-content relative"> 
               <div className="absolute inset-0 -z-10 animated-bg-pattern opacity-5 dark:opacity-[0.02] pointer-events-none" />
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}
-                  initial={{ opacity: 0, y: 15 }} 
+                  initial={{ opacity: 0, y: 10 }} 
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }} 
-                  transition={{ duration: 0.3, ease: "easeInOut" }} // Slightly faster, consistent ease
+                  exit={{ opacity: 0, y: -10 }} 
+                  transition={{ duration: 0.25, ease: "easeInOut" }} 
                   onAnimationComplete={() => setIsLoadingPage(false)} 
                   className="p-4 md:p-6 lg:p-8 min-h-[calc(100vh-theme(spacing.4)-theme(spacing.4))] md:min-h-screen" 
                 >
@@ -279,5 +285,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
