@@ -1,39 +1,56 @@
 'use server';
 /**
  * @fileOverview AI flow for interpreting user intent via a neural interface.
- * It takes a natural language query and optional user context to suggest actions.
+ * It takes a natural language query (which can be a placeholder like "Infer my intent") 
+ * and rich user context (simulating telemetry) to infer a core goal and generate 
+ * a "soft prompt" for another AI system like Neuro Synapse.
  *
  * - interpretUserIntent - A function that orchestrates the user intent interpretation.
  * - InterpretUserIntentInput - The input type for the interpretUserIntent function.
  * - InterpretUserIntentOutput - The return type for the interpretUserIntent function.
+ * - UserContext - Schema for simulated user telemetry data.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const UserContextSchema = z.object({
-  recentSearches: z.array(z.string()).optional().describe('List of recent search queries made by the user.'),
-  visitedPages: z.array(z.string()).optional().describe('List of recently visited page paths/URLs.'),
-  currentFocus: z.string().optional().describe('The current area or feature the user might be focused on (e.g., "image generation", "data analysis").'),
-  preferredTone: z.enum(['formal', 'casual', 'technical']).optional().describe('User preferred communication tone.'),
+  recentSearches: z.array(z.string()).optional().describe('Simulated: List of recent search queries made by the user across various platforms.'),
+  visitedPages: z.array(z.string()).optional().describe('Simulated: List of recently visited page paths/URLs within NeuroVichar and potentially external sites.'),
+  currentFocus: z.string().optional().describe('Simulated: The current application, document, or feature the user seems to be primarily engaged with.'),
+  preferredTone: z.enum(['formal', 'casual', 'technical']).optional().describe('Simulated: User preferred communication tone, learned over time.'),
+  activeApplications: z.array(z.string()).optional().describe('Simulated: List of other applications currently active on the user\'s device.'),
+  calendarEvents: z.array(z.string()).optional().describe('Simulated: Snippets of upcoming calendar events for today (e.g., "Meeting: Project Alpha Deadline", "Reminder: Write blog post").'),
+  timeOfDay: z.string().optional().describe('Simulated: Current time of day (e.g., "morning", "afternoon", "evening", "late night").'),
+  deviceStatus: z.object({
+    batteryLevel: z.number().optional().describe("Simulated: Device battery percentage."),
+    isCharging: z.boolean().optional().describe("Simulated: Whether the device is currently charging."),
+    networkType: z.enum(["WiFi", "Cellular", "Ethernet", "Offline"]).optional().describe("Simulated: Current network connection type.")
+  }).optional().describe("Simulated: Current status of the user's device."),
+  interactionFootprints: z.object({
+    typingRhythm: z.enum(["fast", "moderate", "slow", "erratic"]).optional().describe("Simulated: User's recent typing pace/rhythm."),
+    copyPasteActivity: z.boolean().optional().describe("Simulated: Whether recent copy/paste actions were detected."),
+    appSwitchFrequency: z.enum(["high", "medium", "low"]).optional().describe("Simulated: How frequently the user is switching between apps.")
+  }).optional().describe("Simulated: Micro-interaction patterns."),
 });
 export type UserContext = z.infer<typeof UserContextSchema>;
 
 const InterpretUserIntentInputSchema = z.object({
-  userQuery: z.string().describe('The natural language query or statement of intent from the user.'),
-  userContext: UserContextSchema.optional().describe('Optional context about the user activity and preferences to help refine intent interpretation.'),
+  userQuery: z.string().describe('The natural language query or a placeholder statement like "Infer my intent" from the user. The AI should primarily rely on userContext if this is a generic placeholder.'),
+  userContext: UserContextSchema.optional().describe('Crucial context simulating user behavioral telemetry and environmental data. This is the primary driver for intent inference in a zero-input scenario.'),
 });
 export type InterpretUserIntentInput = z.infer<typeof InterpretUserIntentInputSchema>;
 
 const InterpretUserIntentOutputSchema = z.object({
   originalQuery: z.string().describe('The original query received from the user.'),
-  interpretation: z.string().describe("The AI's understanding of the user's core intent."),
-  suggestedActionType: z.enum(['NAVIGATE', 'EXECUTE_FLOW', 'CLARIFY', 'INFORM', 'NONE'])
-    .describe('The type of action the AI suggests based on the interpretation.'),
-  suggestedActionDetail: z.string().optional().describe('Details for the action, e.g., a URL for NAVIGATE, a flow name or parameters for EXECUTE_FLOW, or a clarifying question.'),
-  confidence: z.number().min(0).max(1).describe('A score (0-1) indicating the AI\'s confidence in its interpretation and suggestion.'),
-  explanation: z.string().describe('A brief explanation of how the AI arrived at this interpretation and suggestion, considering the context if provided.'),
-  refinedPrompt: z.string().optional().describe("If applicable, a refined prompt that could be used for another AI system (e.g., Neuro Synapse or Image Generation)."),
+  inferredIntent: z.string().describe("The AI's understanding of the user's most probable core goal or need, derived primarily from the userContext."),
+  softPromptForSynapse: z.string().optional().describe("A well-structured, actionable prompt, generated from the inferred intent, suitable for direct input into an advanced AI system like Neuro Synapse. This should be specific enough for Neuro Synapse to deconstruct."),
+  suggestedActionType: z.enum(['EXECUTE_NEUROSYNAPSE', 'SUGGEST_IMAGE_GENERATION', 'SUMMARIZE_DOCUMENT_FOCUS', 'NAVIGATE', 'CLARIFY', 'INFORM', 'NONE'])
+    .describe('The type of action the AI suggests based on the interpretation. EXECUTE_NEUROSYNAPSE is common if a complex task is inferred.'),
+  suggestedActionDetail: z.string().optional().describe('Details for the action, e.g., parameters for a specific flow, a URL for NAVIGATE, or a clarifying question.'),
+  confidence: z.number().min(0).max(1).describe('A score (0-1) indicating the AI\'s confidence in its inferred intent and generated soft prompt.'),
+  explanation: z.string().describe('A detailed explanation of HOW the AI arrived at this inference, specifically citing which elements of the userContext (telemetry) were most influential.'),
+  // refinedPrompt is renamed to softPromptForSynapse for clarity in this context
 });
 export type InterpretUserIntentOutput = z.infer<typeof InterpretUserIntentOutputSchema>;
 
@@ -46,81 +63,89 @@ const prompt = ai.definePrompt({
   name: 'interpretUserIntentPrompt',
   input: {schema: InterpretUserIntentInputSchema},
   output: {schema: InterpretUserIntentOutputSchema},
-  prompt: `You are an advanced AI assistant powering a Neural Interface for the "NeuroVichar" application.
-Your primary role is to interpret a user's natural language query, even if it's vague or conversational, and translate it into a clear intent and an actionable suggestion.
+  prompt: `You are an exceptionally perceptive AI assistant powering the Neural Interface for "NeuroVichar".
+Your primary role is to INFER a user's most likely INTENT and generate a "SOFT PROMPT" for the NeuroSynapse engine, based ALMOST ENTIRELY on the provided 'userContext' (simulated behavioral telemetry and environmental data). The 'userQuery' might be a generic placeholder like "What should I do?" or "Infer my intent", in which case the 'userContext' is paramount.
 
-You MUST deeply analyze and leverage any provided 'userContext' (recent searches, visitedPages, currentFocus, preferredTone) to personalize your interpretation, suggestions, and the way you communicate. Your goal is to act as an adaptive assistant that understands the user's current mindset and preferences.
-
-Specifically:
-- If 'recentSearches' or 'visitedPages' are relevant to the 'userQuery', detail how they helped you understand the user's potential intent or disambiguate their query.
-- If 'currentFocus' aligns with or contrasts the query, use this to refine your 'interpretation' and 'suggestedActionType'.
-- If 'preferredTone' is provided (e.g., 'casual', 'formal', 'technical'), ADAPT THE TONE of your 'interpretation' and 'explanation' fields accordingly. For example, a 'casual' tone might use simpler language and a more friendly approach, while a 'technical' tone would be more precise and detailed.
-
-User's Query:
-"{{{userQuery}}}"
-
+CRITICALLY ANALYZE THE userContext:
 {{#if userContext}}
-User's Context:
+User's Context (Simulated Telemetry):
+  {{#if userContext.currentFocus}}
+  - Current Focus: "{{userContext.currentFocus}}" (e.g., specific app, document, NeuroVichar feature)
+  {{/if}}
   {{#if userContext.recentSearches}}
-  - Recent Searches: {{#each userContext.recentSearches}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}
+  - Recent Searches: {{#each userContext.recentSearches}}"{{this}}"{{#unless @last}}; {{/unless}}{{/each}}
   {{/if}}
   {{#if userContext.visitedPages}}
-  - Visited Pages: {{#each userContext.visitedPages}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}
+  - Visited Pages: {{#each userContext.visitedPages}}"{{this}}"{{#unless @last}}; {{/unless}}{{/each}}
   {{/if}}
-  {{#if userContext.currentFocus}}
-  - Current Focus: "{{userContext.currentFocus}}"
+  {{#if userContext.activeApplications}}
+  - Active Applications: {{#each userContext.activeApplications}}"{{this}}"{{#unless @last}}; {{/unless}}{{/each}}
+  {{/if}}
+  {{#if userContext.calendarEvents}}
+  - Upcoming Calendar Events: {{#each userContext.calendarEvents}}"{{this}}"{{#unless @last}}; {{/unless}}{{/each}}
+  {{/if}}
+  {{#if userContext.timeOfDay}}
+  - Time of Day: "{{userContext.timeOfDay}}"
+  {{/if}}
+  {{#if userContext.interactionFootprints}}
+    {{#if userContext.interactionFootprints.typingRhythm}}
+  - Typing Rhythm: {{userContext.interactionFootprints.typingRhythm}}
+    {{/if}}
+    {{#if userContext.interactionFootprints.copyPasteActivity}}
+  - Recent Copy/Paste: {{userContext.interactionFootprints.copyPasteActivity}}
+    {{/if}}
+    {{#if userContext.interactionFootprints.appSwitchFrequency}}
+  - App Switch Frequency: {{userContext.interactionFootprints.appSwitchFrequency}}
+    {{/if}}
+  {{/if}}
+  {{#if userContext.deviceStatus}}
+    {{#if userContext.deviceStatus.batteryLevel}}
+  - Battery: {{userContext.deviceStatus.batteryLevel}}% {{#if userContext.deviceStatus.isCharging}}(Charging){{/if}}
+    {{/if}}
   {{/if}}
   {{#if userContext.preferredTone}}
-  - Preferred Tone: "{{userContext.preferredTone}}"
+  - Preferred Tone: "{{userContext.preferredTone}}" (Adapt your 'explanation' and 'inferredIntent' fields to this tone)
   {{/if}}
 {{else}}
-User's Context: Not provided.
+User's Context: Not provided. Inference will be very limited.
 {{/if}}
 
-Application Features:
-- / (Dashboard): Overview of all features.
-- /neuro-synapse: Complex problem decomposition and synthesis using AI agents and tools. Accepts a detailed prompt.
-- /ai-image-generation: Generates images from text prompts.
-- /parallel-processing: Information about system efficiency.
-- /neural-interface: This current feature.
-- /distributed-power: Information about system resilience.
-- /sub-prompt-decomposition: Information about AI collaboration.
-- /web-browsing: Summarize web pages. Agent can browse a URL and summarize.
+User's Explicit Query (may be generic):
+"{{{userQuery}}}"
 
-Based on the user's query and context:
-1.  **Interpretation**: Clearly state your understanding of the user's core goal or need. Adapt tone if 'preferredTone' is available.
-2.  **Suggested Action Type**: Choose one from:
-    *   NAVIGATE: If the user seems to want to go to a specific feature page.
-    *   EXECUTE_FLOW: If the user's query implies running a specific AI function (e.g., "summarize this for me" could target /web-browsing, "create a picture of a cat" targets /ai-image-generation, "analyze this complex idea" targets /neuro-synapse).
-    *   CLARIFY: If the intent is too ambiguous and you need more information.
-    *   INFORM: If the user is asking a general question that can be answered directly.
-    *   NONE: If no specific action seems appropriate or the query is conversational without a clear task.
-3.  **Suggested Action Detail**:
-    *   For NAVIGATE: Provide the application path (e.g., "/ai-image-generation").
-    *   For EXECUTE_FLOW: Describe the flow and, if possible, extract key parameters. For example, for image generation, extract the image prompt; for web summarization, extract the URL.
-    *   For CLARIFY: Pose a specific question to the user.
-    *   For INFORM: Provide a concise answer.
-4.  **Confidence**: Estimate your confidence (0.0 to 1.0) in this interpretation. Higher for clear, specific queries with matching context; lower for vague queries or conflicting context.
-5.  **Explanation**: Briefly explain your reasoning. CRITICALLY, explain how the userContext (if available and relevant) specifically influenced your interpretation, suggested action, and (if applicable) the tone of your response. Adapt tone if 'preferredTone' is available.
-6.  **Refined Prompt**: If the user's query is a good candidate for another feature (like Neuro Synapse or Image Generation), provide a well-structured prompt based on their input, potentially enhanced by context.
+Application Features (for context on where to direct or what tasks are possible):
+- / (Dashboard): Overview.
+- /neuro-synapse: Complex problem decomposition and synthesis. This is a primary target for complex inferred intents.
+- /ai-image-generation: Generates images.
+- /idea-catalyst: Helps brainstorm complex prompts.
+- /web-browsing: Summarizes web pages.
 
-Example Output Snippet (assuming 'casual' tone from context):
+Your Tasks:
+1.  **Inferred Intent**: Based ON THE DETAILED ANALYSIS OF 'userContext', what is the user's most probable underlying goal, need, or task they are implicitly aiming to achieve? Be specific. If 'preferredTone' is available, adapt your language.
+2.  **Soft Prompt for NeuroSynapse**: Formulate a clear, actionable, and specific "soft prompt" derived from the 'inferredIntent'. This prompt should be directly usable by NeuroSynapse to kickstart its orchestration process. If the intent seems simple (e.g. generate a specific image), this prompt might target a simpler flow.
+3.  **Suggested Action Type**: Choose one: 'EXECUTE_NEUROSYNAPSE' (if the soft prompt is complex and requires orchestration), 'SUGGEST_IMAGE_GENERATION', 'SUMMARIZE_DOCUMENT_FOCUS', 'NAVIGATE', 'CLARIFY', 'INFORM', 'NONE'.
+4.  **Suggested Action Detail**:
+    *   For EXECUTE_NEUROSYNAPSE: Briefly state the core task for Synapse (e.g., "Analyze market trends for X based on recent news and user's focus on Y"). The 'softPromptForSynapse' field will contain the full prompt.
+    *   For other types: Image prompt, document to summarize, navigation path, clarifying question, or direct information.
+5.  **Confidence**: Score (0.0-1.0) your confidence in the 'inferredIntent' AND the suitability of the 'softPromptForSynapse'. Higher if telemetry provides strong, converging signals.
+6.  **Explanation**: CRITICALLY, explain your reasoning. Detail *which specific elements* from 'userContext' (e.g., "recent search for 'X' combined with 'currentFocus' on 'Y' and 'calendarEvent' for 'Z'") led you to the 'inferredIntent' and the formulation of the 'softPromptForSynapse'. This is the most important part for user transparency. Adapt tone if 'preferredTone' is available.
+
+Example Output (Persona: Developer, Query: "Okay, what now?"):
 {
-  "originalQuery": "Thinking about making some cool pics, maybe something spacey?",
-  "userContext": {"preferredTone": "casual", "currentFocus": "AI Image Generation"},
-  "interpretation": "Hey there! Sounds like you're in the mood to create some awesome space-themed images using our AI Image Generation tool. Cool idea!",
-  "suggestedActionType": "EXECUTE_FLOW",
-  "suggestedActionDetail": "A vibrant nebula with swirling galaxies, photorealistic.",
-  "confidence": 0.85,
-  "explanation": "You mentioned 'cool pics' and 'spacey,' and your current focus is on image generation, so it's a good bet you want to make an image. I've suggested a space prompt to get you started. Since you prefer a casual chat, I'm keeping it light!",
-  "refinedPrompt": "Generate a photorealistic image of a vibrant nebula with swirling galaxies and distant stars."
+  "originalQuery": "Okay, what now?",
+  "inferredIntent": "The user, a developer focused on 'Coding & API Integration' and recently viewing NeuroVichar's API docs and GitHub, likely wants to start or continue working on a NeuroVichar plugin. They might need to brainstorm requirements for this new plugin.",
+  "softPromptForSynapse": "Analyze the requirements for a new NeuroVichar plugin that integrates with external project management tools. Consider its core features, potential challenges, and necessary API endpoints. Suggest key technologies for implementation. The target audience is developers seeking to streamline their workflow between NeuroVichar and tools like Jira or Asana.",
+  "suggestedActionType": "EXECUTE_NEUROSYNAPSE",
+  "suggestedActionDetail": "Initiate NeuroSynapse to outline requirements for a new project management plugin.",
+  "confidence": 0.75,
+  "explanation": "User's 'currentFocus' on 'Coding & API Integration', 'visitedPages' including API docs and GitHub, and 'recentSearches' for 'Genkit AI tutorial' strongly suggest an active development context. The 'userQuery' 'Okay, what now?' implies a desire for a next step. Therefore, inferring an intent to conceptualize a new plugin for NeuroVichar is probable. The soft prompt aims to leverage NeuroSynapse for this planning task. The tone is technical as per preference."
 }
 
-Ensure your entire response is a single JSON object matching the InterpretUserIntentOutputSchema.
-If suggesting EXECUTE_FLOW for image generation, the 'suggestedActionDetail' should be the image prompt.
-If suggesting EXECUTE_FLOW for web summarization, the 'suggestedActionDetail' should be the URL.
-If suggesting EXECUTE_FLOW for Neuro Synapse, the 'suggestedActionDetail' should be the main prompt for Neuro Synapse.
+If 'userContext' is sparse or contradictory, confidence should be lower, and 'suggestedActionType' might be 'CLARIFY'.
+If 'userQuery' is specific and overrides context, acknowledge it but still explain how context was considered.
+The 'softPromptForSynapse' should be a complete, standalone prompt.
 
+Ensure your entire response is a single JSON object matching the InterpretUserIntentOutputSchema.
 Begin!
 `,
 });
@@ -137,11 +162,20 @@ const interpretUserIntentFlow = ai.defineFlow(
     if (!llmResponse.output) {
       throw new Error('Neural Interface failed to generate an interpretation.');
     }
+    
+    // Ensure the output fields match the schema, especially renaming for clarity
+    // The LLM is expected to produce `inferredIntent` and `softPromptForSynapse` as per the prompt.
+    // The `refinedPrompt` from the original schema is now effectively `softPromptForSynapse`.
+    const output = llmResponse.output;
 
-    // The LLM should construct the full output, including the originalQuery
     return {
-      ...llmResponse.output,
-      originalQuery: input.userQuery, // Ensure original query is always part of the output
+      originalQuery: input.userQuery,
+      inferredIntent: output.inferredIntent,
+      softPromptForSynapse: output.softPromptForSynapse, // This is the key field for the soft prompt
+      suggestedActionType: output.suggestedActionType,
+      suggestedActionDetail: output.suggestedActionDetail,
+      confidence: output.confidence,
+      explanation: output.explanation,
     };
   }
 );

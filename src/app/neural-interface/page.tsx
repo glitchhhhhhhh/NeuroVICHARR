@@ -1,15 +1,13 @@
-
 'use client';
 
 import { useState, type FormEvent, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Kept for potential future use
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { BrainCircuit, ChevronRight, Loader2, AlertCircle, Wand2, Info, HelpCircle, Search, LinkIcon, FileText, Settings2, Copy, Check, UserCircle, Activity, MessageSquare } from "lucide-react";
+import { BrainCircuit, ChevronRight, Loader2, AlertCircle, Wand2, Info, HelpCircle, Search, LinkIcon, FileText, Settings2, Copy, Check, UserCircle, Activity, MessageSquare, Sparkles, Zap, Eye, Brain } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { interpretUserIntent, type InterpretUserIntentOutput, type UserContext } from '@/ai/flows/interpret-user-intent-flow';
+import { neuroSynapse, type NeuroSynapseOutput, type NeuroSynapseInput } from '@/ai/flows/neuro-synapse-flow';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,6 +16,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import Link from "next/link";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea'; // For displaying refined prompt
+import NeuroSynapseResultDisplay from '@/components/neuro-synapse-result-display'; // For displaying NeuroSynapse output
 
 const ActionIcon: React.FC<{ type: InterpretUserIntentOutput['suggestedActionType'] | undefined, className?: string }> = ({ type, className = "w-7 h-7" }) => {
   switch (type) {
@@ -29,95 +29,137 @@ const ActionIcon: React.FC<{ type: InterpretUserIntentOutput['suggestedActionTyp
   }
 };
 
-const predefinedContexts: Record<string, { label: string; icon: React.ReactNode; context: UserContext }> = {
-  none: {
-    label: "No Specific Context",
-    icon: <UserCircle className="mr-2 h-4 w-4 opacity-50" />,
-    context: {},
-  },
-  imageExplorer: {
-    label: "Image Creator Persona",
-    icon: <FileText className="mr-2 h-4 w-4 text-accent/80" />,
+const predefinedContexts: Record<string, { label: string; icon: React.ReactNode; context: UserContext; exampleActivity: string }> = {
+  researcher: {
+    label: "Researcher Persona",
+    icon: <Search className="mr-2 h-4 w-4 text-blue-500" />,
     context: {
-      recentSearches: ["futuristic cities", "cyberpunk art", "fantasy landscapes"],
-      visitedPages: ["/ai-image-generation", "/"],
-      currentFocus: "AI Image Generation",
-      preferredTone: "casual",
-    }
-  },
-  dataAnalyst: {
-    label: "Data Analyst Persona",
-    icon: <Search className="mr-2 h-4 w-4 text-accent/80" />,
-    context: {
-      recentSearches: ["market trends Q4", "impact of AI on finance", "data visualization techniques"],
-      visitedPages: ["/web-browsing", "/neuro-synapse", "/dashboard"],
-      currentFocus: "Data Analysis and Summarization",
-      preferredTone: "technical",
-    }
-  },
-  newbie: {
-    label: "New User Persona",
-    icon: <HelpCircle className="mr-2 h-4 w-4 text-accent/80" />,
-    context: {
-      recentSearches: ["what is neurovichar", "how to use AI prompts", "getting started guide"],
-      visitedPages: ["/", "/help"],
-      currentFocus: "Learning the platform",
+      recentSearches: ["latest advancements in quantum computing", "ethical AI frameworks", "causal inference models"],
+      visitedPages: ["/neuro-synapse", "/docs/ai-models", "arxiv.org"],
+      currentFocus: "Deep Research & Analysis",
       preferredTone: "formal",
-    }
+    },
+    exampleActivity: "Currently focused on a research paper about AI ethics, with recent searches on quantum computing."
+  },
+  developer: {
+    label: "Developer Persona",
+    icon: <FileText className="mr-2 h-4 w-4 text-green-500" />,
+    context: {
+      recentSearches: ["Next.js server components", "Tailwind CSS best practices", "Genkit AI tutorial"],
+      visitedPages: ["/plugin-marketplace", "github.com/neurovichar", "/docs/api"],
+      currentFocus: "Coding & API Integration",
+      preferredTone: "technical",
+    },
+    exampleActivity: "Working on a new plugin for NeuroVichar, frequently visiting API docs and GitHub."
+  },
+  creativePro: {
+    label: "Creative Professional",
+    icon: <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />,
+    context: {
+      recentSearches: ["surreal art styles", "AI generated music prompts", "character design inspiration"],
+      visitedPages: ["/ai-image-generation", "/idea-catalyst", "pinterest.com"],
+      currentFocus: "Content Creation & Brainstorming",
+      preferredTone: "casual",
+    },
+    exampleActivity: "Exploring visual ideas for a new project, frequently using image generation and idea catalyst."
+  },
+   genericUser: {
+    label: "General User Context",
+    icon: <UserCircle className="mr-2 h-4 w-4 opacity-60" />,
+    context: {
+      recentSearches: ["how to use NeuroVichar", "best AI tools 2024"],
+      visitedPages: ["/", "/help"],
+      currentFocus: "Platform Exploration",
+      preferredTone: "casual",
+    },
+    exampleActivity: "Browsing NeuroVichar features, learning about AI capabilities."
   }
 };
 
 
 export default function NeuralInterfacePage() {
-  const [userQuery, setUserQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingIntent, setIsLoadingIntent] = useState(false);
+  const [isLoadingSynapse, setIsLoadingSynapse] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<InterpretUserIntentOutput | null>(null);
-  const [selectedContextKey, setSelectedContextKey] = useState<string>('none');
-  const [userContext, setUserContext] = useState<UserContext>(predefinedContexts.none.context);
+  const [intentResult, setIntentResult] = useState<InterpretUserIntentOutput | null>(null);
+  const [synapseResult, setSynapseResult] = useState<NeuroSynapseOutput | null>(null);
+  const [selectedContextKey, setSelectedContextKey] = useState<string>('genericUser');
+  
   const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
 
+  const currentUserContext = predefinedContexts[selectedContextKey]?.context || {};
+
   const handleContextChange = useCallback((key: string) => {
     setSelectedContextKey(key);
-    setUserContext(predefinedContexts[key]?.context || {});
+    setIntentResult(null); // Clear previous intent results when context changes
+    setSynapseResult(null); // Clear previous synapse results
   }, []);
   
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsLoading(true);
+  const handleNeuroVicharActivation = async () => {
+    setIsLoadingIntent(true);
     setError(null);
-    // Keep previous result for a smoother transition or set to null
-    // setResult(null);
+    setIntentResult(null);
+    setSynapseResult(null);
 
     try {
-      if (!userQuery.trim()) {
-        setError('Please enter your query or intention.');
-        setIsLoading(false);
-        return;
-      }
-      const response = await interpretUserIntent({ userQuery, userContext: selectedContextKey === 'none' ? undefined : userContext });
-      setResult(response);
+      const response = await interpretUserIntent({ userQuery: "Infer intent based on my current context.", userContext: currentUserContext });
+      setIntentResult(response);
+      toast({
+        title: "Intent Inferred!",
+        description: "NeuroVichar has analyzed your context and suggested a course of action.",
+        className: "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-600"
+      });
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred while interpreting your intent.';
       setError(errorMessage);
-      console.error("Neural Interface error:", e);
-      toast({
-        title: "Interpretation Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      console.error("Neural Interface (Intent) error:", e);
+      toast({ title: "Intent Inference Error", description: errorMessage, variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setIsLoadingIntent(false);
     }
   };
 
+  const handleEngageSynapse = async () => {
+    if (!intentResult?.refinedPrompt) {
+      setError("No inferred prompt available to send to Neuro Synapse.");
+      toast({ title: "Synapse Error", description: "Cannot proceed without an inferred prompt.", variant: "destructive" });
+      return;
+    }
+    setIsLoadingSynapse(true);
+    setError(null);
+    setSynapseResult(null);
+
+    try {
+      const synapseInput: NeuroSynapseInput = {
+        mainPrompt: intentResult.refinedPrompt,
+        userContext: currentUserContext, // Pass the context for potential deeper use in Synapse
+        isMagicMode: true // Indicate this prompt originated from an inferred context
+      };
+      const response = await neuroSynapse(synapseInput);
+      setSynapseResult(response);
+       toast({
+        title: "Neuro Synapse Complete!",
+        description: "The orchestrated AI task has finished processing.",
+        className: "bg-gradient-to-r from-green-500 to-teal-500 text-white border-green-600"
+      });
+    } catch (e: any) {
+      const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred with Neuro Synapse.';
+      setError(errorMessage);
+      console.error("Neural Interface (Synapse) error:", e);
+      toast({ title: "Neuro Synapse Error", description: errorMessage, variant: "destructive" });
+    } finally {
+      setIsLoadingSynapse(false);
+    }
+  };
+
+
   const handleCopyPrompt = () => {
-    if (result?.refinedPrompt) {
-      navigator.clipboard.writeText(result.refinedPrompt)
+    if (intentResult?.refinedPrompt) {
+      navigator.clipboard.writeText(intentResult.refinedPrompt)
         .then(() => {
           setIsCopied(true);
-          toast({ title: "Prompt Copied!", description: "The refined prompt is now in your clipboard." });
+          toast({ title: "Prompt Copied!", description: "The inferred prompt is now in your clipboard." });
           setTimeout(() => setIsCopied(false), 2000);
         })
         .catch(err => {
@@ -126,22 +168,6 @@ export default function NeuralInterfacePage() {
         });
     }
   };
-
-  useEffect(() => {
-    // Example initial query based on a random context to showcase variety
-    const randomContextKey = Object.keys(predefinedContexts)[Math.floor(Math.random() * Object.keys(predefinedContexts).length)];
-    handleContextChange(randomContextKey);
-
-    if (randomContextKey === 'imageExplorer') {
-      setUserQuery("I feel like creating something visually stunning, maybe a neon-drenched cyberpunk city?");
-    } else if (randomContextKey === 'dataAnalyst') {
-      setUserQuery("Can you find and summarize the latest news on renewable energy investments?");
-    } else if (randomContextKey === 'newbie') {
-      setUserQuery("I'm new here. What's the best way to start using NeuroVichar for creative writing?");
-    } else {
-      setUserQuery("Hello! What can you do for me today?");
-    }
-  }, [handleContextChange]);
   
   const getConfidenceColor = (confidence: number): string => {
     if (confidence < 0.3) return 'bg-red-500';
@@ -150,315 +176,259 @@ export default function NeuralInterfacePage() {
   };
 
   return (
-    <div className="space-y-12">
-      <header className="flex flex-col items-center text-center space-y-4">
-        <motion.div
-          animate={{ 
-            scale: [1, 1.15, 1], 
-            filter: ['hue-rotate(0deg)', 'hue-rotate(45deg)', 'hue-rotate(0deg)'] 
-          }}
-          transition={{ duration: 3, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
-        >
-          <BrainCircuit className="w-20 h-20 text-accent drop-shadow-xl" />
-        </motion.div>
-        <div>
-          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-accent via-primary to-accent">
+    <div className="space-y-12 min-h-screen">
+      <header className="relative text-center py-16 md:py-24 overflow-hidden rounded-xl bg-gradient-to-br from-primary/80 via-accent/70 to-pink-500/80 shadow-2xl">
+        <div className="absolute inset-0 opacity-20" style={{backgroundImage: "url('/circuit-board.svg')"}}></div>
+        <div className="relative z-10">
+          <motion.div
+            initial={{ opacity:0, scale:0.5 }}
+            animate={{ opacity:1, scale:1 }}
+            transition={{ type: 'spring', stiffness:100, damping:10, delay:0.1 }}
+          >
+            <Eye className="w-28 h-28 text-primary-foreground/80 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity:0, y:-20 }}
+            animate={{ opacity:1, y:0 }}
+            transition={{ duration:0.6, delay:0.3, ease:'easeOut' }}
+            className="text-5xl md:text-7xl font-extrabold tracking-tight text-primary-foreground"
+          >
             Neural Interface
-          </h1>
-          <p className="text-xl text-muted-foreground mt-3 max-w-2xl mx-auto">
-            Converse naturally. Let our AI understand your intentions and guide you through NeuroVichar's capabilities.
-          </p>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity:0, y:20 }}
+            animate={{ opacity:1, y:0 }}
+            transition={{ duration:0.6, delay:0.5, ease:'easeOut' }}
+            className="text-xl md:text-2xl text-primary-foreground/90 mt-5 max-w-3xl mx-auto px-4"
+          >
+            Tap into NeuroVichar's cognitive core. We analyze your digital context to anticipate your needs—no typing required.
+          </motion.p>
         </div>
       </header>
 
-      <div className="grid md:grid-cols-3 gap-10 items-start">
+      <div className="grid lg:grid-cols-3 gap-10 items-start">
         <motion.div 
-          className="md:col-span-2"
+          className="lg:col-span-1 space-y-6"
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+          transition={{ duration: 0.6, delay: 0.7, ease: "easeOut" }}
         >
-          <Card className="shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 bg-card/85 backdrop-blur-md border-primary/20">
+          <Card className="shadow-xl bg-card/85 backdrop-blur-md border-primary/15 sticky top-24">
             <CardHeader>
-              <CardTitle className="text-3xl font-semibold text-foreground/95">What's on your mind?</CardTitle>
-              <CardDescription className="text-base text-muted-foreground">
-                Describe what you'd like to do, ask a question, or state your goal. The more context you provide (via the panel on the right), the better the AI can assist.
-              </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-6">
-                <div className="space-y-2.5">
-                  <Label htmlFor="user-query-input" className="text-md font-medium text-foreground/80">Your Intention / Query</Label>
-                  <Textarea
-                    id="user-query-input"
-                    placeholder="e.g., 'Generate an image of a serene landscape' or 'Help me analyze recent tech news'"
-                    value={userQuery}
-                    onChange={(e) => setUserQuery(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="text-lg p-4 min-h-[150px] resize-y bg-background/60 focus:bg-background focus:ring-accent focus:border-accent text-foreground/90 placeholder-muted-foreground/70 rounded-lg shadow-inner"
-                    aria-label="User intention or query for Neural Interface"
-                  />
-                </div>
-                 {error && (
-                  <motion.div initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 250, damping: 18 }}>
-                    <Alert variant="destructive" className="shadow-lg border-red-500/50">
-                      <AlertCircle className="h-5 w-5 text-red-500" />
-                      <AlertTitle className="font-semibold text-red-500">Interpretation Error</AlertTitle>
-                      <AlertDescription className="text-red-700 dark:text-red-300">{error}</AlertDescription>
-                    </Alert>
-                  </motion.div>
-                )}
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  type="submit" 
-                  disabled={isLoading} 
-                  size="lg" 
-                  className="text-lg px-10 py-7 w-full sm:w-auto shadow-lg hover:shadow-accent/30 transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2.5 h-6 w-6 animate-spin" />
-                      Interpreting...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2.5 h-6 w-6" />
-                      Engage Interface
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-        >
-          <Card className="shadow-xl bg-card/75 backdrop-blur-md border-primary/15">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2.5 text-foreground/90"><Settings2 className="w-6 h-6 text-accent"/>Simulate User Context</CardTitle>
+              <CardTitle className="text-xl flex items-center gap-2.5 text-foreground/90"><UserCircle className="w-7 h-7 text-accent"/>Simulate Your Context</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                Choose a persona to simulate different user contexts. This helps the AI tailor its response.
+                Choose a persona to simulate different background activities and preferences. NeuroVichar will use this to infer your intent.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3.5">
-              {Object.entries(predefinedContexts).map(([key, {label, icon}]) => (
+              {Object.entries(predefinedContexts).map(([key, {label, icon, exampleActivity}]) => (
                 <Button 
                   key={key} 
                   variant={selectedContextKey === key ? "default" : "outline"} 
                   onClick={() => handleContextChange(key)}
                   className={cn(
-                    "w-full justify-start text-left py-3 px-4 transition-all duration-200 ease-out transform hover:scale-[1.02]",
+                    "w-full justify-start text-left py-3.5 px-4 text-sm transition-all duration-200 ease-out transform hover:scale-[1.02]",
                     selectedContextKey === key 
-                      ? "bg-accent text-accent-foreground shadow-md border-accent" 
-                      : "border-border hover:border-accent hover:bg-accent/10"
+                      ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg border-transparent" 
+                      : "border-border hover:border-accent hover:bg-accent/10 text-foreground/80"
                   )}
-                  disabled={isLoading}
+                  disabled={isLoadingIntent || isLoadingSynapse}
+                  title={exampleActivity}
                 >
                   {icon}
-                  <span className="truncate">{label}</span>
+                  <span className="truncate font-medium">{label}</span>
                 </Button>
               ))}
-               <AnimatePresence>
-                {selectedContextKey !== 'none' && userContext && Object.keys(userContext).length > 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                    animate={{ opacity: 1, height: 'auto', marginTop: '1rem' }}
-                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                    className="text-xs text-muted-foreground space-y-1.5 p-3.5 bg-muted/40 rounded-lg border border-dashed border-border/70 shadow-inner"
-                  >
-                    {userContext.recentSearches && userContext.recentSearches.length > 0 && <p><strong>Recent Searches:</strong> {userContext.recentSearches.join(', ')}</p>}
-                    {userContext.visitedPages && userContext.visitedPages.length > 0 && <p><strong>Visited Pages:</strong> {userContext.visitedPages.join(', ')}</p>}
-                    {userContext.currentFocus && <p><strong>Current Focus:</strong> {userContext.currentFocus}</p>}
-                    {userContext.preferredTone && <p><strong>Preferred Tone:</strong> {userContext.preferredTone}</p>}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          className="lg:col-span-2 space-y-8"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8, ease: "easeOut" }}
+        >
+          <Card className="shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 bg-card/90 backdrop-blur-lg border-2 border-accent/30">
+            <CardHeader className="text-center">
+              <motion.div
+                key={selectedContextKey} // Re-animate on context change
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 150, damping: 12 }}
+              >
+                <Brain className="w-16 h-16 text-accent mx-auto mb-3" />
+              </motion.div>
+              <CardTitle className="text-3xl font-semibold text-foreground/95">Activate NeuroVichar</CardTitle>
+              <CardDescription className="text-base text-muted-foreground mt-1.5">
+                Click below. We'll analyze your <strong className="text-accent">{predefinedContexts[selectedContextKey]?.label || "current"}</strong> context and predict your next move.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+                <Button 
+                  onClick={handleNeuroVicharActivation}
+                  disabled={isLoadingIntent || isLoadingSynapse} 
+                  size="lg" 
+                  className="text-xl px-12 py-8 shadow-xl hover:shadow-accent/40 transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-br from-accent via-pink-500 to-purple-600 text-primary-foreground rounded-xl group"
+                >
+                  {isLoadingIntent ? (
+                    <>
+                      <Loader2 className="mr-3 h-7 w-7 animate-spin" />
+                      ANALYZING CONTEXT...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="mr-3 h-7 w-7 transition-transform group-hover:rotate-[15deg] group-hover:scale-110" />
+                      ENGAGE NEUROVICHAR
+                    </>
+                  )}
+                </Button>
+                 {error && !isLoadingIntent && !isLoadingSynapse && (
+                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
+                    <Alert variant="destructive" className="shadow-lg border-red-500/50 text-left">
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      <AlertTitle className="font-semibold text-red-600 dark:text-red-400">Interface Error</AlertTitle>
+                      <AlertDescription className="text-red-700 dark:text-red-300">{error}</AlertDescription>
+                    </Alert>
                   </motion.div>
                 )}
-              </AnimatePresence>
             </CardContent>
           </Card>
+      
+          <AnimatePresence>
+            {isLoadingIntent && (
+              <motion.div /* Loading for Intent */ > {/* ... existing loading ... */} </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+          {intentResult && !isLoadingIntent && (
+            <motion.div
+              key="intent-result-section"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, ease: "circOut", delay: 0.1 }}
+              className="mt-8"
+            >
+              <Card className="shadow-2xl bg-card/95 backdrop-blur-xl border-2 border-primary/30 overflow-hidden">
+                <CardHeader className="pb-5 border-b border-border/60 bg-gradient-to-br from-card to-muted/10 p-6">
+                  <div className="flex items-center gap-4">
+                     <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}>
+                      <BrainCircuit className="w-12 h-12 text-primary drop-shadow-lg" />
+                     </motion.div>
+                    <div>
+                      <CardTitle className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-pink-500">
+                        Inferred Intent
+                      </CardTitle>
+                      <CardDescription className="text-base mt-1 text-muted-foreground">
+                        Based on your <strong className="text-foreground/80">{predefinedContexts[selectedContextKey]?.label || "selected"}</strong> context.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6 p-6 md:p-8">
+                  <motion.div initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay:0.1, duration:0.4, ease: "easeOut"}}>
+                    <Label className="text-sm font-semibold text-muted-foreground tracking-wider uppercase">AI's Interpretation:</Label>
+                    <p className="text-lg text-foreground/95 p-4 mt-1.5 bg-muted/50 rounded-lg shadow-md border border-primary/20">{intentResult.interpretation}</p>
+                  </motion.div>
+
+                  {intentResult.refinedPrompt && (
+                    <motion.div initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay:0.2, duration:0.4, ease: "easeOut"}}>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <Label className="text-sm font-semibold text-muted-foreground tracking-wider uppercase">Generated Prompt for NeuroSynapse:</Label>
+                        <Button variant="ghost" size="sm" onClick={handleCopyPrompt} className="text-accent hover:text-accent/80">
+                          {isCopied ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
+                          {isCopied ? 'Copied' : 'Copy'}
+                        </Button>
+                      </div>
+                      <Textarea 
+                          value={intentResult.refinedPrompt} 
+                          readOnly 
+                          className="text-md bg-muted/50 border-dashed border-accent/30 min-h-[120px] p-3.5 rounded-lg shadow-inner focus-visible:ring-accent focus-visible:border-accent"
+                      />
+                    </motion.div>
+                  )}
+                  
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="explanation" className="border-border/40">
+                      <AccordionTrigger className="text-md font-semibold hover:no-underline text-foreground/80 py-3 text-left">Why this inference? (AI's Reasoning)</AccordionTrigger>
+                      <AccordionContent className="space-y-3 pt-2 text-foreground/85 bg-muted/20 p-4 rounded-b-md border-t border-dashed border-border/30">
+                        <p className="text-sm leading-relaxed">{intentResult.explanation}</p>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                  
+                   <div className="pt-4 text-center">
+                        <Button 
+                          onClick={handleEngageSynapse}
+                          disabled={isLoadingSynapse || !intentResult.refinedPrompt} 
+                          size="lg" 
+                          className="text-lg px-10 py-7 shadow-xl hover:shadow-green-500/30 transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-primary-foreground rounded-lg group"
+                        >
+                          {isLoadingSynapse ? (
+                            <>
+                              <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                              Engaging Synapse...
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="mr-3 h-6 w-6 transition-transform group-hover:animate-ping once" />
+                              Engage Synapse with this Intent
+                            </>
+                          )}
+                        </Button>
+                    </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {isLoadingSynapse && (
+                 <motion.div 
+                    key="loading-indicator-ni-synapse"
+                    initial={{ opacity: 0, height: 0, y: 20 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -20, transition: {duration: 0.25} }}
+                    className="mt-8"
+                  >
+                    <Card className="shadow-xl bg-card/85 backdrop-blur-sm border-green-500/20">
+                      <CardContent className="p-8 text-center space-y-5">
+                        <motion.div
+                          animate={{ rotate: [0, 360], scale: [1, 1.1, 1] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        >
+                          <BrainCircuit className="mx-auto h-14 w-14 text-green-500" />
+                        </motion.div>
+                        <p className="text-lg text-muted-foreground font-medium">NeuroSynapse is processing your inferred intent... This may take a moment.</p>
+                        <div className="w-full bg-muted rounded-full h-3.5 dark:bg-gray-700 overflow-hidden">
+                          <motion.div 
+                            className="bg-gradient-to-r from-green-500 to-teal-500 h-3.5 rounded-full"
+                            initial={{ width: "0%" }}
+                            animate={{ width: "100%" }}
+                            transition={{ duration: 1.8, repeat: Infinity, repeatType: "reverse", ease:"easeInOut" }}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+            )}
+            {synapseResult && !isLoadingSynapse && (
+              <motion.div
+                key="synapse-result-section"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.1, ease: "circOut" }}
+                className="mt-8"
+              >
+                <NeuroSynapseResultDisplay result={synapseResult} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
         </motion.div>
       </div>
-      
-      <AnimatePresence>
-        {isLoading && (
-          <motion.div 
-            key="loading-indicator-ni"
-            initial={{ opacity: 0, height: 0, y: 20 }}
-            animate={{ opacity: 1, height: 'auto', y: 0 }}
-            exit={{ opacity: 0, height: 0, y: -20, transition: {duration: 0.25} }}
-            className="mt-10"
-          >
-            <Card className="shadow-xl bg-card/85 backdrop-blur-sm border-primary/20">
-              <CardContent className="p-8 text-center space-y-5">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                >
-                  <Loader2 className="mx-auto h-14 w-14 text-accent" />
-                </motion.div>
-                <p className="text-lg text-muted-foreground font-medium">Connecting to the neural stream... Weaving insights from digital echoes.</p>
-                <div className="w-full bg-muted rounded-full h-3.5 dark:bg-gray-700 overflow-hidden">
-                  <motion.div 
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-3.5 rounded-full"
-                    initial={{ width: "0%" }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 1.8, repeat: Infinity, repeatType: "reverse", ease:"easeInOut" }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-      {result && !isLoading && (
-        <motion.div
-          key="result-section-ni"
-          initial={{ opacity: 0, y: 30, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.6, ease: "circOut", delay: 0.1 }}
-          className="mt-12"
-        >
-          <Card className="shadow-2xl bg-card/90 backdrop-blur-lg overflow-hidden border-2 border-accent/30">
-            <CardHeader className="pb-5 border-b border-border/60 bg-gradient-to-br from-card to-muted/20 p-6">
-              <div className="flex items-center gap-4">
-                 <motion.div
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.2 }}
-                  >
-                  <BrainCircuit className="w-12 h-12 text-accent drop-shadow-lg" />
-                 </motion.div>
-                <div>
-                  <CardTitle className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-accent via-primary to-pink-500">
-                    Neural Interpretation
-                  </CardTitle>
-                  <CardDescription className="text-base mt-1.5 text-muted-foreground">
-                    Original Query: <span className="italic text-foreground/85">"{result.originalQuery}"</span>
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-8 p-6 md:p-8">
-              
-              <motion.div initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay:0.15, duration:0.5, ease: "easeOut"}}>
-                <Label className="text-sm font-semibold text-muted-foreground tracking-wider uppercase">AI's Interpretation:</Label>
-                <p className="text-lg text-foreground/95 p-4 mt-1.5 bg-muted/40 rounded-lg shadow-md border border-primary/25">{result.interpretation}</p>
-              </motion.div>
-
-              <Separator className="bg-border/50" />
-
-              <div className="grid md:grid-cols-2 gap-x-8 gap-y-6 items-start">
-                <motion.div initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay:0.25, duration:0.5, ease: "easeOut"}}>
-                  <Label className="text-sm font-semibold text-muted-foreground tracking-wider uppercase">Suggested Action:</Label>
-                  <Card className="p-4 mt-1.5 bg-muted/40 shadow-md border border-accent/30">
-                    <div className="flex items-center space-x-3.5">
-                      <ActionIcon type={result.suggestedActionType} className="w-8 h-8 flex-shrink-0" />
-                      <div>
-                        <Badge variant="outline" className="text-sm capitalize mb-1.5 border-accent/60 text-accent bg-accent/10 px-2.5 py-1 rounded-full font-medium">{result.suggestedActionType?.toLowerCase().replace('_', ' ')}</Badge>
-                        <p className="text-md font-medium text-foreground">
-                          {result.suggestedActionDetail || 'No specific detail.'}
-                          {result.suggestedActionType === "NAVIGATE" && result.suggestedActionDetail && (
-                            <Link href={result.suggestedActionDetail} passHref>
-                              <Button variant="link" size="sm" className="ml-1.5 p-0 h-auto text-accent hover:text-accent/80 font-semibold group">
-                                Go <ChevronRight className="w-4 h-4 ml-0.5 transition-transform group-hover:translate-x-1"/>
-                              </Button>
-                            </Link>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-
-                <motion.div initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} transition={{delay:0.3, duration:0.5, ease: "easeOut"}}>
-                  <Label className="text-sm font-semibold text-muted-foreground tracking-wider uppercase">Confidence Level:</Label>
-                  <div className="p-4 mt-1.5 bg-muted/40 rounded-lg shadow-md border border-border/40">
-                    <Progress value={result.confidence * 100} className="h-3.5 mb-1.5" indicatorClassName={getConfidenceColor(result.confidence)} />
-                    <p className={cn("text-right text-sm font-semibold", 
-                        result.confidence < 0.3 ? 'text-red-500' : result.confidence < 0.7 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
-                    )}>
-                        {(result.confidence * 100).toFixed(0)}% Confident
-                    </p>
-                  </div>
-                </motion.div>
-              </div>
-              
-              <Accordion type="single" collapsible className="w-full" defaultValue="explanation">
-                <AccordionItem value="explanation" className="border-border/50">
-                  <AccordionTrigger className="text-md font-semibold hover:no-underline text-foreground/85 py-3.5">View Explanation & Refined Prompt</AccordionTrigger>
-                  <AccordionContent className="space-y-5 pt-3 text-foreground/90 bg-muted/20 p-4 rounded-b-lg border-t border-dashed border-border/40">
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground tracking-wider uppercase">Explanation:</Label>
-                      <p className="text-sm leading-relaxed mt-1">{result.explanation}</p>
-                    </div>
-                    {result.refinedPrompt && (
-                       <div>
-                         <div className="flex justify-between items-center">
-                           <Label className="text-xs font-medium text-muted-foreground tracking-wider uppercase">Suggested Refined Prompt (for other features):</Label>
-                           <Button variant="ghost" size="sm" onClick={handleCopyPrompt} className="text-accent hover:text-accent/80">
-                             {isCopied ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
-                             {isCopied ? 'Copied!' : 'Copy'}
-                           </Button>
-                         </div>
-                         <Textarea 
-                            value={result.refinedPrompt} 
-                            readOnly 
-                            className="text-sm bg-background/50 border-dashed mt-1 min-h-[90px] focus-visible:ring-accent focus-visible:border-accent"
-                         />
-                       </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-      </AnimatePresence>
-      
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: result && !isLoading ? 0.3 : 0.1, ease: "easeOut" }}
-      >
-        <Card className="mt-16 bg-card/80 backdrop-blur-lg shadow-xl border-primary/15">
-          <CardHeader>
-            <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground/95">Understanding the Neural Interface</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-             <div className="flex justify-center my-5 p-6 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl border border-primary/20">
-                <MessageSquare className="w-24 h-24 text-primary opacity-60" />
-             </div>
-            <div className="prose prose-sm sm:prose dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
-             <p>
-               The Neural Interface aims to provide a more intuitive way to interact with complex AI systems. 
-               Instead of requiring precise commands or structured inputs, it attempts to understand your intent from natural language.
-               By optionally considering your (simulated) recent activity and preferences, it can tailor its interpretations and suggestions, much like how a human assistant learns over time.
-               This demonstration showcases how the AI can:
-             </p>
-             <ul className="space-y-1.5">
-               <li>Parse conversational queries and extract core meaning.</li>
-               <li>Map interpreted intent to specific application features or actions.</li>
-               <li>Suggest navigation paths or parameters for other AI flows.</li>
-               <li>Request clarification when ambiguity is high.</li>
-               <li>Provide an explanation for its reasoning, enhancing transparency.</li>
-             </ul>
-             <p>
-               The "Simulate User Context" panel allows you to see how different background information can influence the AI's response, mimicking a personalized experience.
-               This is a step towards AI systems that adapt more fluidly to individual user needs and communication styles, creating a truly bespoke interaction.
-             </p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
     </div>
   );
 }

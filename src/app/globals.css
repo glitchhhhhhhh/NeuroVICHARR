@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,99 +10,112 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 98%; /* Very Light Gray, almost white */
+    --background: 210 20% 98%; /* Lighter, slightly bluish white */
     --foreground: 220 15% 25%; /* Dark Cool Gray for text */
+    
     --card: 0 0% 100%; /* White */
     --card-foreground: 220 15% 25%; /* Dark Cool Gray */
+    
     --popover: 0 0% 100%; /* White */
     --popover-foreground: 220 15% 25%; /* Dark Cool Gray */
-    --primary: 260 70% 55%; /* Rich Purple */
+    
+    --primary: 208 93% 50%; /* Deep Blue */
     --primary-foreground: 0 0% 100%; /* White for text on primary */
-    --secondary: 0 0% 94%; /* Light Gray */
+    
+    --secondary: 210 10% 96%; /* Light Gray - for subtle backgrounds */
     --secondary-foreground: 220 10% 40%; /* Medium Gray */
-    --muted: 0 0% 90%; /* Lighter Gray for muted elements */
-    --muted-foreground: 0 0% 50%; /* Standard muted text */
-    --accent: 330 80% 60%; /* Vibrant Pink/Magenta */
+    
+    --muted: 210 10% 90%; /* Lighter Gray for muted elements */
+    --muted-foreground: 210 10% 55%; /* Standard muted text */
+    
+    --accent: 282 82% 56%; /* Electric Purple */
     --accent-foreground: 0 0% 100%; /* White for text on accent */
+    
     --destructive: 0 75% 55%; /* Strong Red */
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 88%; /* Light Gray Border */
-    --input: 0 0% 85%; /* Slightly darker gray for input borders */
-    --ring: 260 70% 65%; /* Lighter Rich Purple for focus rings */
-    --chart-1: 260 70% 50%; 
-    --chart-2: 330 75% 55%;
-    --chart-3: 210 70% 50%; /* Bright Blue */
-    --chart-4: 30 90% 55%; /* Bright Orange */
+    
+    --border: 210 15% 88%; /* Light Gray Border */
+    --input: 210 15% 85%; /* Slightly darker gray for input borders */
+    --ring: 282 82% 60%; /* Lighter Electric Purple for focus rings */
+
+    --chart-1: 208 93% 50%; /* Deep Blue */
+    --chart-2: 282 82% 56%; /* Electric Purple */
+    --chart-3: 160 70% 45%; /* Teal/Cyan */
+    --chart-4: 30 90% 55%;  /* Bright Orange */
     --chart-5: 120 50% 50%; /* Muted Green */
+    
     --radius: 0.75rem; /* Slightly larger radius */
 
-    /* Sidebar Light Theme */
-    --sidebar-background: 0 0% 96%; /* Off-white */
-    --sidebar-foreground: 220 15% 25%; /* Dark Cool Gray */
-    --sidebar-primary: 260 70% 55%; /* Rich Purple */
-    --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 330 80% 60%; /* Vibrant Pink/Magenta */
-    --sidebar-accent-foreground: 0 0% 100%; /* White */
-    --sidebar-border: 0 0% 85%; 
-    --sidebar-ring: 260 70% 65%;
+    /* Sidebar Light Theme (can be same as root if no specific override needed) */
+    --sidebar-background: 210 20% 97%; /* Very light cool gray */
+    --sidebar-foreground: 220 15% 25%; 
+    --sidebar-primary: 208 93% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 282 82% 56%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 210 15% 88%; 
+    --sidebar-ring: 282 82% 60%;
   }
 
   .dark {
     --background: 220 20% 10%; /* Very Dark Desaturated Blue */
     --foreground: 0 0% 85%; /* Light Gray for text */
+    
     --card: 220 20% 13%; /* Darker Desaturated Blue */
     --card-foreground: 0 0% 85%; /* Light Gray */
+    
     --popover: 220 20% 13%; 
     --popover-foreground: 0 0% 85%; 
-    --primary: 260 75% 65%; /* Brighter Rich Purple */
+    
+    --primary: 208 85% 60%; /* Brighter Deep Blue */
     --primary-foreground: 0 0% 100%; 
+    
     --secondary: 220 20% 18%; /* Slightly Lighter Dark Blue */
     --secondary-foreground: 0 0% 75%; 
+    
     --muted: 220 20% 22%; /* Even Lighter Dark Blue for muted elements */
     --muted-foreground: 0 0% 60%; 
-    --accent: 330 85% 70%; /* Brighter Vibrant Pink/Magenta */
+    
+    --accent: 282 85% 65%; /* Brighter Electric Purple */
     --accent-foreground: 0 0% 100%; 
+    
     --destructive: 0 70% 60%; /* Slightly brighter Red for dark mode */
     --destructive-foreground: 0 0% 100%;
+    
     --border: 220 20% 25%; /* Dark Gray-Blue Border */
     --input: 220 20% 30%; 
-    --ring: 260 75% 70%; /* Lighter Rich Purple for focus rings */
-    --chart-1: 260 75% 60%;
-    --chart-2: 330 80% 65%;
-    --chart-3: 210 75% 60%;
+    --ring: 282 85% 70%; /* Lighter Electric Purple for focus rings */
+
+    --chart-1: 208 85% 60%;
+    --chart-2: 282 85% 65%;
+    --chart-3: 160 70% 55%;
     --chart-4: 30 85% 60%;
     --chart-5: 120 55% 60%;
 
     /* Sidebar Dark Theme */
-    --sidebar-background: 220 20% 12%; /* Dark Desaturated Blue for sidebar */
+    --sidebar-background: 220 20% 9%; /* Slightly darker than main dark bg */
     --sidebar-foreground: 0 0% 85%; 
-    --sidebar-primary: 260 75% 65%; 
+    --sidebar-primary: 208 85% 60%; 
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 330 85% 70%;
+    --sidebar-accent: 282 85% 65%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 20% 28%; 
-    --sidebar-ring: 260 75% 70%;
+    --sidebar-border: 220 20% 22%; 
+    --sidebar-ring: 282 85% 70%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border transition-colors duration-150 ease-in-out;
+    @apply border-border transition-colors duration-200 ease-in-out; /* Slightly faster general transition */
   }
   body {
     @apply bg-background text-foreground;
   }
-  /* Apply subtle gradient to main content area background */
-  .sidebar-inset-content > div.p-4.md\:p-6.lg\:p-8 { /* More specific selector for the motion.div content area */
-    @apply bg-gradient-to-br from-background via-muted/10 to-background;
-  }
-  .dark .sidebar-inset-content > div.p-4.md\:p-6.lg\:p-8 {
-    @apply bg-gradient-to-br from-background via-muted/5 to-background;
-  }
+  /* The animated-bg-pattern is applied to a specific div inside SidebarInset in layout.tsx */
 
   ::selection {
-    background-color: hsla(var(--primary), 0.7);
-    color: hsl(var(--primary-foreground));
+    background-color: hsla(var(--accent), 0.7); /* Using accent for selection */
+    color: hsl(var(--accent-foreground));
   }
 }
 
@@ -111,13 +123,8 @@ body {
 body, .bg-background, .text-foreground, .bg-card, .text-card-foreground, .border-border,
 button, a, input, textarea, select {
   transition-property: background-color, color, border-color, box-shadow, transform, opacity;
-  transition-duration: 0.2s; /* Slightly faster default transition */
-  transition-timing-function: ease-in-out;
-}
-
-/* Card enhancements */
-.card { /* General card style from ShadCN is used, this is an example if global override was needed */
-  @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
+  transition-duration: 0.2s; 
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); /* Smoother ease */
 }
 
 
@@ -198,43 +205,41 @@ button, a, input, textarea, select {
 /* Subtle animated background pattern for main content area within SidebarInset */
 @keyframes pattern-flow {
   0% { background-position: 0 0; }
-  100% { background-position: -80px 80px; } /* Adjust based on pattern size and desired speed */
+  100% { background-position: -100px 100px; } /* Increased movement for more noticeable but still subtle effect */
 }
 
 /* Updated .animated-bg-pattern to be more subtle and "techy" */
 .animated-bg-pattern {
-  /* Light mode pattern: subtle primary and accent dots */
+  /* Light mode pattern: very subtle primary and accent dots */
   background-image:
-    radial-gradient(hsla(var(--primary), 0.04) 0.7px, transparent 0.7px), /* slightly larger, more transparent primary dots */
-    radial-gradient(hsla(var(--accent), 0.03) 0.7px, transparent 0.7px);   /* slightly larger, more transparent accent dots */
-  background-size: 40px 40px, 40px 40px; /* slightly sparser pattern */
-  background-position: 0 0, 20px 20px; /* offset for interweaving */
-  animation: pattern-flow 30s linear infinite; /* faster, more dynamic flow */
+    radial-gradient(hsla(var(--primary), 0.025) 0.5px, transparent 0.5px), /* Smaller, more transparent primary dots */
+    radial-gradient(hsla(var(--accent), 0.02) 0.5px, transparent 0.5px);   /* Smaller, more transparent accent dots */
+  background-size: 50px 50px, 50px 50px; /* Sparsert pattern */
+  background-position: 0 0, 25px 25px; /* offset for interweaving */
+  animation: pattern-flow 40s linear infinite; /* Slower, more gentle flow */
 }
 
 .dark .animated-bg-pattern {
-  /* Dark mode pattern: slightly more visible dots */
+  /* Dark mode pattern: slightly more visible but still very subtle dots */
   background-image:
-    radial-gradient(hsla(var(--primary), 0.08) 0.7px, transparent 0.7px),
-    radial-gradient(hsla(var(--accent), 0.06) 0.7px, transparent 0.7px);
-  background-size: 40px 40px, 40px 40px;
-  background-position: 0 0, 20px 20px;
-  animation: pattern-flow 30s linear infinite;
+    radial-gradient(hsla(var(--primary), 0.04) 0.5px, transparent 0.5px),
+    radial-gradient(hsla(var(--accent), 0.03) 0.5px, transparent 0.5px);
+  background-size: 50px 50px, 50px 50px;
+  background-position: 0 0, 25px 25px;
+  animation: pattern-flow 40s linear infinite;
 }
 
-/* General page entrance animation helper */
-.page-enter-animation {
-  @apply motion-safe:animate-fadeInUp; /* Example, requires defining fadeInUp */
-}
-
+/* General page entrance animation helper (if needed, Framer Motion is preferred) */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(15px); /* Reduced from 20px */
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
+.animate-fadeInUp { /* Example definition if not using Framer Motion for everything */
+  animation: fadeInUp 0.4s ease-out forwards; /* Faster animation */
+}
