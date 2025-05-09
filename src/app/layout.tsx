@@ -13,6 +13,9 @@ import { ModeToggle } from '@/components/mode-toggle';
 import { ThemeProvider } from "@/components/theme-provider";
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { NeuroVicharLoadingLogo } from '@/components/loading-logo';
+
 
 // Attempt to load .env for server-side (e.g. scripts) if not already loaded by Next.js
 // This might be redundant for typical Next.js app flow but useful for standalone scripts.
@@ -43,6 +46,14 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname === '/signup'; 
+  const [isLoadingPage, setIsLoadingPage] = useState(false);
+
+  useEffect(() => {
+    // Show loader on pathname change, before the new page component starts its animation.
+    setIsLoadingPage(true);
+    // The loader will be turned off by onAnimationComplete of the page content's motion.div
+  }, [pathname]);
+
 
   if (isAuthPage) {
     return (
@@ -58,6 +69,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            {isLoadingPage && <NeuroVicharLoadingLogo text="Loading Page..." />}
             <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/20 dark:from-background dark:to-muted/10 p-4">
                 <AnimatePresence mode="wait">
                     <motion.div
@@ -66,6 +78,7 @@ export default function RootLayout({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
+                    onAnimationComplete={() => setIsLoadingPage(false)}
                     className="w-full max-w-md" 
                     >
                     {children}
@@ -93,6 +106,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          {isLoadingPage && <NeuroVicharLoadingLogo />}
           <SidebarProvider defaultOpen>
             <Sidebar>
               <SidebarHeader className="p-4">
@@ -241,6 +255,7 @@ export default function RootLayout({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.35, ease: "easeInOut" }}
+                  onAnimationComplete={() => setIsLoadingPage(false)}
                   className="p-4 md:p-6 lg:p-8 min-h-[calc(100vh-theme(spacing.4)-theme(spacing.4))] md:min-h-screen" 
                 >
                   {children}
@@ -254,3 +269,4 @@ export default function RootLayout({
     </html>
   );
 }
+
