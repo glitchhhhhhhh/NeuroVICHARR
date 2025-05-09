@@ -17,7 +17,7 @@ const aiFeatures = [
   },
   {
     title: "NeuroShastra",
-    description: "NeuroShastra is the sacred science of thought-to-task AI—decoding your digital behavior, learning your intent, and delivering solutions without you ever lifting a finger.",
+    description: "NeuroShastra is the sacred science of thought-to-task AI—decoding your digital behaviour, learning your intent, and delivering solutions without you ever lifting a finger.",
     icon: <Eye className="w-8 h-8 text-accent" />,
     href: "/neuroshastra",
     tag: "Zero-Input AI"
