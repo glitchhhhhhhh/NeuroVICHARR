@@ -1,6 +1,7 @@
 'use client';
+import React from 'react'; 
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'; // Added useRef
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Zap, Network, GitFork, Cpu, Gauge, CheckCircle2, XCircle, Loader2, MessageSquare, BrainCircuit, Lightbulb, Settings, Play, Pause, RefreshCw } from "lucide-react";
@@ -62,7 +63,7 @@ const getNodeColor = (status: SubTask['status']) => {
   if (status === 'active') return 'hsl(var(--accent))';
   if (status === 'completed') return 'hsl(var(--primary))';
   if (status === 'failed') return 'hsl(var(--destructive))';
-  if (status === 'debating') return 'hsl(var(--yellow-500))'; // You might need to add this color to globals.css or use a predefined one
+  if (status === 'debating') return 'hsl(var(--yellow-500))'; 
   return 'hsl(var(--muted-foreground))';
 };
 
@@ -74,7 +75,7 @@ const TaskNode: React.FC<{ task: SubTask, agents: Agent[], onClick: () => void, 
   } else if (task.assignedAgentId) {
     const idParts = task.assignedAgentId.split('-');
     if (idParts.length > 1) {
-      agentShortName = idParts[1].charAt(0).toUpperCase() + idParts[1].slice(1); // Capitalize
+      agentShortName = idParts[1].charAt(0).toUpperCase() + idParts[1].slice(1); 
     } else {
       agentShortName = task.assignedAgentId;
     }
@@ -312,10 +313,24 @@ export default function ParallelProcessingCorePage() {
 
   const allTasksCompleted = tasksData.every(t => t.status === 'completed' || t.status === 'failed');
 
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (delay: number = 0) => ({
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.4, delay, ease: "easeOut" },
+    }),
+  };
 
   return (
     <div className="space-y-12">
-      <header className="flex flex-col items-center text-center space-y-4">
+      <motion.header 
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+        custom={0}
+        className="flex flex-col items-center text-center space-y-4"
+      >
          <motion.div
           animate={{ 
             scale: [1, 1.1, 1], 
@@ -342,15 +357,16 @@ export default function ParallelProcessingCorePage() {
             </Button>
         </div>
          <p className="text-sm text-muted-foreground">Simulation Time: {simulationTime}s</p>
-      </header>
+      </motion.header>
 
       <div className="grid lg:grid-cols-3 gap-8 items-start">
         {/* Main DAG Visualization */}
         <motion.div 
             className="lg:col-span-2"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            custom={0.1}
         >
             <Card className="shadow-2xl bg-card/85 backdrop-blur-md border-primary/20 min-h-[700px] relative overflow-auto">
                 <CardHeader>
@@ -400,9 +416,10 @@ export default function ParallelProcessingCorePage() {
         {/* Agent Status & Selected Task Details */}
         <motion.div 
             className="space-y-8"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            custom={0.2}
         >
             <Card className="shadow-xl bg-card/75 backdrop-blur-md border-primary/15">
                 <CardHeader>
@@ -484,9 +501,18 @@ export default function ParallelProcessingCorePage() {
         </motion.div>
       </div>
 
-      <Separator className="my-12 bg-border/60" />
+      <motion.div variants={sectionVariants} initial="hidden" animate="visible" custom={0.3}>
+        <Separator className="my-12 bg-border/60" />
+      </motion.div>
+      
 
-      <section className="space-y-8">
+      <motion.section 
+        className="space-y-8"
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+        custom={0.4}
+      >
         <div className="text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Advanced Orchestration Concepts</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">NeuroVichar's Parallel Processing Core goes beyond simple concurrency.</p>
@@ -520,12 +546,13 @@ export default function ParallelProcessingCorePage() {
                 </CardContent>
             </Card>
         </div>
-      </section>
+      </motion.section>
 
         <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            custom={0.5}
             className="mt-12 text-center"
         >
             <Card className="inline-block p-8 shadow-2xl bg-gradient-to-tr from-primary/10 via-accent/10 to-primary/10 border-2 border-primary/30 rounded-xl backdrop-blur-lg">
@@ -538,8 +565,6 @@ export default function ParallelProcessingCorePage() {
                 </p>
             </Card>
         </motion.div>
-
-
     </div>
   );
 }

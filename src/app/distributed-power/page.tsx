@@ -3,16 +3,26 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Share2, LifeBuoy, AlertCircle, Zap, ShieldOff } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { motion } from "framer-motion"; // Ensure motion is imported
+import { motion } from "framer-motion";
 import Image from 'next/image';
 
 export default function DistributedPowerPage() {
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (delay: number = 0) => ({
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.4, delay, ease: "easeOut" },
+    }),
+  };
+
   return (
     <div className="space-y-10">
       <motion.header 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+        custom={0}
         className="flex items-center space-x-6"
       >
         <Share2 className="w-14 h-14 text-accent drop-shadow-lg" />
@@ -25,9 +35,10 @@ export default function DistributedPowerPage() {
       </motion.header>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+        custom={0.1}
       >
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-card/80 backdrop-blur-sm">
           <CardHeader>
@@ -57,9 +68,10 @@ export default function DistributedPowerPage() {
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+        custom={0.2}
       >
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-card/80 backdrop-blur-sm border-destructive/30">
           <CardHeader>
