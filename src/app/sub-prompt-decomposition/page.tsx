@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchCode, GitFork, Brain, Users, Target } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "framer-motion"; // Ensure motion is imported
+import Image from 'next/image';
 
 export default function SubPromptDecompositionPage() {
   return (

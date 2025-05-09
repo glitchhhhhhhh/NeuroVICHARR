@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -67,31 +66,46 @@ const getNodeColor = (status: SubTask['status']) => {
   return 'hsl(var(--muted-foreground))';
 };
 
-const TaskNode: React.FC<{ task: SubTask, agents: Agent[], onClick: () => void, style?: React.CSSProperties }> = ({ task, agents, onClick, style }) => (
-  <motion.div
-    layoutId={task.id}
-    onClick={onClick}
-    style={style}
-    className="absolute p-3 border rounded-lg shadow-lg cursor-pointer hover:shadow-xl transition-all w-40 bg-card/90 backdrop-blur-sm"
-    initial={{ opacity: 0, scale: 0.8 }}
-    animate={{ opacity: 1, scale: 1, borderColor: getNodeColor(task.status) }}
-    exit={{ opacity: 0, scale: 0.8 }}
-    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-  >
-    <div className="flex items-center justify-between mb-1">
-      <span className="text-xs font-semibold truncate text-foreground">{task.name}</span>
-      {task.status === 'active' && <Loader2 className="w-3 h-3 text-accent animate-spin" />}
-      {task.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-primary" />}
-      {task.status === 'failed' && <XCircle className="w-3 h-3 text-destructive" />}
-      {task.status === 'debating' && <MessageSquare className="w-3 h-3 text-yellow-500" />}
-    </div>
-    <Progress value={task.progress} className="h-1.5 mb-1" indicatorClassName={cn(
-        task.status === 'completed' ? 'bg-primary' : task.status === 'active' ? 'bg-accent' : task.status === 'failed' ? 'bg-destructive' : 'bg-muted-foreground'
-    )} />
-    <p className="text-[10px] text-muted-foreground">Conf: {task.confidence.toFixed(2)}</p>
-    {task.assignedAgentId && <p className="text-[10px] text-muted-foreground truncate">Agent: {agents.find(a => a.id === task.assignedAgentId)?.name.split(' ')[0] || task.assignedAgentId.split('-')[1]}</p>}
-  </motion.div>
-);
+const TaskNode: React.FC<{ task: SubTask, agents: Agent[], onClick: () => void, style?: React.CSSProperties }> = ({ task, agents, onClick, style }) => {
+  const assignedAgentDetails = task.assignedAgentId ? agents.find(a => a.id === task.assignedAgentId) : null;
+  let agentShortName = 'N/A';
+  if (assignedAgentDetails?.name) {
+    agentShortName = assignedAgentDetails.name.split(' ')[0];
+  } else if (task.assignedAgentId) {
+    const idParts = task.assignedAgentId.split('-');
+    if (idParts.length > 1) {
+      agentShortName = idParts[1];
+    } else {
+      agentShortName = task.assignedAgentId;
+    }
+  }
+
+  return (
+    <motion.div
+      layoutId={task.id}
+      onClick={onClick}
+      style={style}
+      className="absolute p-3 border rounded-lg shadow-lg cursor-pointer hover:shadow-xl transition-all w-40 bg-card/90 backdrop-blur-sm"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1, borderColor: getNodeColor(task.status) }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-semibold truncate text-foreground">{task.name}</span>
+        {task.status === 'active' && <Loader2 className="w-3 h-3 text-accent animate-spin" />}
+        {task.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-primary" />}
+        {task.status === 'failed' && <XCircle className="w-3 h-3 text-destructive" />}
+        {task.status === 'debating' && <MessageSquare className="w-3 h-3 text-yellow-500" />}
+      </div>
+      <Progress value={task.progress} className="h-1.5 mb-1" indicatorClassName={cn(
+          task.status === 'completed' ? 'bg-primary' : task.status === 'active' ? 'bg-accent' : task.status === 'failed' ? 'bg-destructive' : 'bg-muted-foreground'
+      )} />
+      <p className="text-[10px] text-muted-foreground">Conf: {task.confidence.toFixed(2)}</p>
+      {task.assignedAgentId && <p className="text-[10px] text-muted-foreground truncate">Agent: {agentShortName}</p>}
+    </motion.div>
+  );
+};
 
 const EdgeLine: React.FC<{ sourcePos: { x: number, y: number }, targetPos: { x: number, y: number }, isCompleted: boolean }> = ({ sourcePos, targetPos, isCompleted }) => {
   const pathD = `M${sourcePos.x},${sourcePos.y} C${sourcePos.x},${(sourcePos.y + targetPos.y) / 2} ${targetPos.x},${(sourcePos.y + targetPos.y) / 2} ${targetPos.x},${targetPos.y}`;
@@ -282,7 +296,7 @@ export default function ParallelProcessingCorePage() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isRunning, simulationTime, agentsData]); // Removed tasksData from dependency array as it's updated inside
+  }, [isRunning, simulationTime, agentsData, resetSimulation]); // Added resetSimulation to dependencies
 
   const allTasksCompleted = tasksData.every(t => t.status === 'completed' || t.status === 'failed');
 
@@ -519,4 +533,3 @@ export default function ParallelProcessingCorePage() {
 }
 
     
-
