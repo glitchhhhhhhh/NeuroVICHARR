@@ -93,12 +93,17 @@ body {
   body {
     @apply bg-background text-foreground;
   }
-  /* Apply subtle gradient to main content area */
-  .sidebar-inset-content > div {
-    @apply bg-gradient-to-br from-background to-muted/20; /* Adjusted gradient intensity */
+  /* Apply subtle gradient to main content area background */
+  .sidebar-inset-content > div.p-4.md\:p-6.lg\:p-8 { /* More specific selector for the motion.div content area */
+    @apply bg-gradient-to-br from-background via-muted/10 to-background;
   }
-  .dark .sidebar-inset-content > div {
-    @apply bg-gradient-to-br from-background to-muted/10; /* Adjusted gradient intensity for dark */
+  .dark .sidebar-inset-content > div.p-4.md\:p-6.lg\:p-8 {
+    @apply bg-gradient-to-br from-background via-muted/5 to-background;
+  }
+
+  ::selection {
+    background-color: hsla(var(--primary), 0.7);
+    color: hsl(var(--primary-foreground));
   }
 }
 
@@ -110,33 +115,39 @@ button, a, input, textarea, select {
   transition-timing-function: ease-in-out;
 }
 
+/* Card enhancements */
+.card { /* General card style from ShadCN is used, this is an example if global override was needed */
+  @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
+}
+
+
 /* Prose styles for markdown content */
 .prose {
   @apply text-foreground max-w-full; 
 }
 .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
-  @apply text-foreground font-bold tracking-tight mb-4 mt-6; /* Adjusted font-weight, tracking and margins */
+  @apply text-foreground font-bold tracking-tight mb-4 mt-6;
 }
 .prose p, .prose ul, .prose ol, .prose li {
-  @apply text-muted-foreground leading-relaxed mb-4; /* Improved line height and margin */
+  @apply text-muted-foreground leading-relaxed mb-4; 
 }
 .prose a {
-  @apply text-accent hover:text-accent/80 font-medium transition-colors duration-150 underline underline-offset-2 hover:underline-offset-4; /* Added underline */
+  @apply text-accent hover:text-accent/80 font-medium transition-colors duration-150 underline underline-offset-2 hover:underline-offset-4;
 }
 .prose strong {
   @apply text-foreground font-semibold;
 }
 .prose blockquote {
-  @apply border-l-4 border-accent pl-6 pr-4 py-3 italic text-muted-foreground bg-accent/10 rounded-r-lg shadow-sm; /* Enhanced styling */
+  @apply border-l-4 border-accent pl-6 pr-4 py-3 italic text-muted-foreground bg-accent/10 rounded-r-lg shadow-sm; 
 }
 .prose code {
-  @apply bg-muted text-accent rounded px-1.5 py-1 text-sm font-mono shadow-sm; /* Changed text color to accent, added shadow */
+  @apply bg-muted text-accent rounded px-1.5 py-1 text-sm font-mono shadow-sm; 
 }
 .prose pre {
-  @apply bg-muted/70 p-4 rounded-lg text-sm shadow-inner overflow-x-auto; /* Darker pre background */
+  @apply bg-muted/70 p-4 rounded-lg text-sm shadow-inner overflow-x-auto; 
 }
 .prose pre code {
-  @apply bg-transparent p-0 shadow-none; /* Reset code style inside pre */
+  @apply bg-transparent p-0 shadow-none;
 }
 .prose ul { @apply list-disc list-outside ml-5; }
 .prose ol { @apply list-decimal list-outside ml-5; }
@@ -157,13 +168,13 @@ button, a, input, textarea, select {
   @apply text-foreground;
 }
 .dark .prose blockquote {
-  @apply border-accent text-muted-foreground bg-accent/15; /* Adjusted for dark */
+  @apply border-accent text-muted-foreground bg-accent/15;
 }
 .dark .prose code {
-   @apply bg-muted text-accent; /* Changed text color to accent */
+   @apply bg-muted text-accent;
 }
 .dark .prose pre {
-  @apply bg-muted/60; /* Darker pre background for dark mode */
+  @apply bg-muted/60;
 }
 .dark .prose pre code {
   @apply bg-transparent;
@@ -179,28 +190,51 @@ button, a, input, textarea, select {
   }
 }
 .animate-gradient-x {
-  background-size: 200% 200%; /* Ensure the background is large enough for the animation */
+  background-size: 200% 200%;
   animation: gradient-x-animation 5s ease infinite;
 }
 
 
-/* Subtle animated background pattern for main content area */
-@keyframes pattern-scroll {
+/* Subtle animated background pattern for main content area within SidebarInset */
+@keyframes pattern-flow {
   0% { background-position: 0 0; }
-  100% { background-position: -160px 160px; } /* Adjust based on pattern size */
+  100% { background-position: -80px 80px; } /* Adjust based on pattern size and desired speed */
 }
 
+/* Updated .animated-bg-pattern to be more subtle and "techy" */
 .animated-bg-pattern {
+  /* Light mode pattern: subtle primary and accent dots */
   background-image:
-    radial-gradient(hsl(var(--muted-foreground)) 0.5px, transparent 0.5px),
-    radial-gradient(hsl(var(--muted-foreground)) 0.5px, hsl(var(--background)) 0.5px);
-  background-size: 20px 20px;
-  background-position: 0 0, 10px 10px;
-  animation: pattern-scroll 60s linear infinite;
+    radial-gradient(hsla(var(--primary), 0.04) 0.7px, transparent 0.7px), /* slightly larger, more transparent primary dots */
+    radial-gradient(hsla(var(--accent), 0.03) 0.7px, transparent 0.7px);   /* slightly larger, more transparent accent dots */
+  background-size: 40px 40px, 40px 40px; /* slightly sparser pattern */
+  background-position: 0 0, 20px 20px; /* offset for interweaving */
+  animation: pattern-flow 30s linear infinite; /* faster, more dynamic flow */
 }
 
 .dark .animated-bg-pattern {
+  /* Dark mode pattern: slightly more visible dots */
   background-image:
-    radial-gradient(hsla(var(--foreground), 0.1) 0.5px, transparent 0.5px),
-    radial-gradient(hsla(var(--foreground), 0.1) 0.5px, hsl(var(--background)) 0.5px);
+    radial-gradient(hsla(var(--primary), 0.08) 0.7px, transparent 0.7px),
+    radial-gradient(hsla(var(--accent), 0.06) 0.7px, transparent 0.7px);
+  background-size: 40px 40px, 40px 40px;
+  background-position: 0 0, 20px 20px;
+  animation: pattern-flow 30s linear infinite;
 }
+
+/* General page entrance animation helper */
+.page-enter-animation {
+  @apply motion-safe:animate-fadeInUp; /* Example, requires defining fadeInUp */
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

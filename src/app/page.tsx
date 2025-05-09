@@ -1,8 +1,9 @@
 
 'use client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import React from 'react'; // Added React import
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"; 
-import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store, Sparkles, Rocket } from "lucide-react";
+import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store, Sparkles, Rocket, BrainCircuit } from "lucide-react";
 import Link from "next/link";
 import { motion } from 'framer-motion';
 
@@ -31,7 +32,7 @@ const aiFeatures = [
   {
     title: "Neural Interface",
     description: "Intuitive LLM-powered prompt submission & context awareness.",
-    icon: <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-brain-circuit text-accent"><path d="M12 5a3 3 0 1 0-5.997.125"/><path d="M12 5a3 3 0 1 1 5.997.125"/><path d="M15 11a3 3 0 1 0-5.997.125"/><path d="M15 11a3 3 0 1 1 5.997.125"/><path d="M9 11a3 3 0 1 0-5.997.125"/><path d="M9 11a3 3 0 1 1 5.997.125"/><path d="M12 17a3 3 0 1 0-5.997.125"/><path d="M12 17a3 3 0 1 1 5.997.125"/><path d="M14 5.5a3 3 0 0 0-2-1"/><path d="M10 5.5a3 3 0 0 1 2-1"/><path d="M17 11.5a3 3 0 0 0-2-1"/><path d="M13 11.5a3 3 0 0 1 2-1"/><path d="M11 11.5a3 3 0 0 0-2-1"/><path d="M7 11.5a3 3 0 0 1 2-1"/><path d="M14 17.5a3 3 0 0 0-2-1"/><path d="M10 17.5a3 3 0 0 1 2-1"/></svg>,
+    icon: <BrainCircuit className="w-8 h-8 text-accent" />,
     href: "/neural-interface",
     tag: "Interaction AI"
   },
@@ -95,43 +96,43 @@ const cardVariants = {
     },
   }),
   hover: {
-    scale: 1.04,
-    boxShadow: "0px 20px 40px hsla(var(--card-foreground) / 0.2)", // Enhanced shadow
-    borderColor: "hsl(var(--accent))",
-    transition: { duration: 0.25, ease: "circOut" }
+    scale: 1.05, // Slightly increased scale
+    boxShadow: "0px 25px 50px -12px hsla(var(--accent) / 0.25)", // More prominent accent shadow
+    borderColor: "hsla(var(--accent) / 0.7)", // Brighter accent border
+    transition: { duration: 0.2, ease: "circOut" }
   }
 };
 
 const MotionCard = motion(Card);
 
 const FeatureCard: React.FC<{feature: (typeof aiFeatures)[0] | (typeof platformFeatures)[0], index: number, isAI: boolean}> = ({ feature, index, isAI }) => (
-  <Link href={feature.href} key={feature.title} className="group block rounded-xl overflow-hidden h-full"> {/* Ensure h-full for parent to take effect */}
+  <Link href={feature.href} key={feature.title} className="group block rounded-xl overflow-hidden h-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background outline-none">
     <MotionCard
       variants={cardVariants}
       initial="hidden"
       animate="visible"
       whileHover="hover"
       custom={index}
-      className="h-full flex flex-col transition-all duration-300 ease-in-out border-2 border-transparent group-hover:border-accent bg-card/80 backdrop-blur-sm group-hover:bg-card/95 group-hover:shadow-accent/10 shadow-lg"
+      className="h-full flex flex-col transition-all duration-300 ease-in-out border-2 border-transparent bg-card/80 backdrop-blur-sm group-hover:bg-card/95 shadow-xl hover:shadow-2xl"
     >
       <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-3 pt-5 px-5">
         <motion.div
-          className={`p-3 rounded-lg ${isAI ? 'bg-accent/10' : 'bg-primary/10'} group-hover:bg-accent/20 transition-colors`}
-          whileHover={{ scale: 1.15, rotate: 7 }}
-          transition={{ type: "spring", stiffness: 300, damping: 10 }}
+          className={`p-3 rounded-lg ${isAI ? 'bg-accent/10' : 'bg-primary/10'} group-hover:bg-accent/15 transition-colors`}
+          whileHover={{ scale: 1.2, rotate: 10 }}
+          transition={{ type: "spring", stiffness: 260, damping: 10 }}
         >
-          {feature.icon}
+          {React.cloneElement(feature.icon, { className: `${feature.icon.props.className} group-hover:text-accent transition-colors` })}
         </motion.div>
         <div className="flex-1">
           <CardTitle className="text-xl group-hover:text-accent transition-colors">{feature.title}</CardTitle>
           {feature.tag && (
-            <span className={`mt-1 inline-block text-xs font-semibold py-0.5 px-2 rounded-full transition-colors ${isAI ? 'bg-primary/10 text-primary group-hover:bg-accent/10 group-hover:text-accent' : 'bg-accent/10 text-accent group-hover:bg-primary/10 group-hover:text-primary'}`}>
+            <span className={`mt-1 inline-block text-xs font-semibold py-0.5 px-2 rounded-full transition-colors ${isAI ? 'bg-primary/10 text-primary group-hover:bg-accent/15 group-hover:text-accent' : 'bg-accent/10 text-accent group-hover:bg-primary/15 group-hover:text-primary'}`}>
               {feature.tag}
             </span>
           )}
         </div>
       </CardHeader>
-      <CardContent className="px-5 pb-5 flex-grow"> {/* flex-grow to push description down */}
+      <CardContent className="px-5 pb-5 flex-grow">
         <CardDescription className="text-muted-foreground group-hover:text-foreground/90 transition-colors leading-relaxed">
           {feature.description}
         </CardDescription>
@@ -150,8 +151,8 @@ const AnimatedSectionTitle: React.FC<{ children: React.ReactNode, className?: st
     {children}
     <motion.div
       className="absolute bottom-[-8px] left-1/2 -translate-x-1/2 h-1 w-24 bg-gradient-to-r from-primary via-accent to-pink-500 rounded-full"
-      initial={{ width: 0 }}
-      animate={{ width: '6rem' }} // 96px
+      initial={{ width: 0, opacity: 0 }}
+      animate={{ width: '6rem', opacity: 1 }} // 96px
       transition={{ delay: delay + 0.3, duration: 0.7, ease: "circOut" }}
     />
   </motion.h2>
@@ -168,27 +169,15 @@ export default function DashboardPage() {
     visible: (i: number) => ({
       opacity: 1,
       transition: {
-        delay: i * 0.08,
-        duration: 0.5,
+        delay: i * 0.06, // Slightly faster stagger
+        duration: 0.4,
       },
     }),
   };
 
   return (
     <div className="space-y-16 md:space-y-24 relative overflow-hidden">
-      {/* Subtle animated background pattern */}
-      <div className="absolute inset-0 -z-10 opacity-5 dark:opacity-[0.03]">
-        <svg width="100%" height="100%">
-          <defs>
-            <pattern id="dashboard-pattern" patternUnits="userSpaceOnUse" width="60" height="60" patternTransform="scale(1) rotate(0)">
-              <path d="M10 10 Q20 0 30 10 T50 10" stroke="hsl(var(--foreground))" strokeWidth="0.5" fill="none"/>
-              <path d="M10 30 Q20 20 30 30 T50 30" stroke="hsl(var(--foreground))" strokeWidth="0.5" fill="none"/>
-              <path d="M10 50 Q20 40 30 50 T50 50" stroke="hsl(var(--foreground))" strokeWidth="0.5" fill="none"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#dashboard-pattern)" />
-        </svg>
-      </div>
+      {/* The global animated background pattern is now in layout.tsx via globals.css */}
 
       <motion.header 
         className="text-center pt-8 pb-12 md:pt-12 md:pb-16"
@@ -210,10 +199,10 @@ export default function DashboardPage() {
           ))}
            <motion.span 
               className="bg-gradient-to-r from-primary via-accent to-pink-500 text-transparent bg-clip-text animate-gradient-x ml-1"
-              style={{backgroundSize: '200% 200%'}}
+              style={{backgroundSize: '200% 200%'}} // Ensure this is defined in globals.css for the animation
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: heroTitlePrefix.length * 0.08, duration: 0.5}}
+              transition={{ delay: heroTitlePrefix.length * 0.06, duration: 0.5}}
             >
               {heroTitleMain.split("").map((char, i) => (
                 <motion.span key={`main-${i}`} variants={titleVariants} custom={heroTitlePrefix.length + i} className="inline-block">
@@ -222,17 +211,17 @@ export default function DashboardPage() {
               ))}
             </motion.span>
            <motion.span 
-              className="text-foreground" // Ensure exclamation mark matches surrounding text or has its own style
+              className="text-foreground"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.08 + 0.2, duration: 0.5}}
+              transition={{ delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.06 + 0.2, duration: 0.5}}
             >!</motion.span>
         </motion.h1>
         <motion.p 
           className="text-xl text-muted-foreground mt-5 sm:text-2xl max-w-3xl mx-auto leading-relaxed"
            variants={{
             hidden: { opacity: 0, y: 20 },
-            visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.08 + 0.3, ease: "easeOut" } }
+            visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.06 + 0.3, ease: "easeOut" } }
           }}
         >
           {heroSubtitle}
@@ -272,8 +261,11 @@ export default function DashboardPage() {
         <Card className="shadow-2xl hover:shadow-purple-500/30 transition-all duration-300 bg-gradient-to-br from-card via-muted/20 to-card/70 backdrop-blur-lg border-2 border-primary/30 rounded-2xl overflow-hidden">
           <CardHeader className="text-center pt-10 pb-6">
             <motion.div 
-              animate={{ y: [0, -5, 0] }} 
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              animate={{ 
+                scale: [1, 1.2, 1],
+                filter: ['brightness(1)', 'brightness(1.5) drop-shadow(0 0 8px hsl(var(--accent)))', 'brightness(1)']
+              }} 
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
               className="inline-block"
             >
               <Sparkles className="w-16 h-16 text-accent mx-auto mb-4" />
@@ -304,20 +296,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </motion.section>
-      <style jsx global>{`
-        @keyframes gradient-x {
-          0%, 100% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-        }
-        .animate-gradient-x {
-          animation: gradient-x 5s ease infinite;
-        }
-      `}</style>
+      {/* The style jsx for animate-gradient-x is now in globals.css */}
     </div>
   );
 }
-

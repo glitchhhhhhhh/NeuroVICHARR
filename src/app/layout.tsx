@@ -49,9 +49,15 @@ export default function RootLayout({
   const [isLoadingPage, setIsLoadingPage] = useState(false);
 
   useEffect(() => {
-    // Show loader on pathname change, before the new page component starts its animation.
     setIsLoadingPage(true);
-    // The loader will be turned off by onAnimationComplete of the page content's motion.div
+    const timer = setTimeout(() => {
+       // Fallback to hide loader if onAnimationComplete doesn't fire quickly enough
+       // or if a page doesn't have the motion.div expected for onAnimationComplete
+       if (isLoadingPage) setIsLoadingPage(false);
+    }, 1000); // Adjust timeout as needed
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
 
@@ -98,8 +104,9 @@ export default function RootLayout({
       <head>
         <title>{String(metadataObject.title)}</title>
         <meta name="description" content={String(metadataObject.description)} />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}> 
+      <body className={`${inter.variable} font-sans antialiased animated-bg-pattern`}> 
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -111,7 +118,7 @@ export default function RootLayout({
             <Sidebar>
               <SidebarHeader className="p-4">
                 <div className="flex items-center justify-between">
-                  <Link href="/" className="flex items-center gap-2">
+                  <Link href="/" className="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar-background rounded-md outline-none">
                     <AppLogo className="w-8 h-8" />
                     <h1 className="text-xl font-semibold">NeuroVichar</h1>
                   </Link>
@@ -184,7 +191,7 @@ export default function RootLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenu className="mt-auto pt-4 border-t border-border/30"> 
+                  <SidebarMenu className="mt-auto pt-4 border-t border-sidebar-border/50"> 
                     <SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2 pt-2">Platform Features</SidebarGroupLabel>
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild tooltip="Parallel Processing">
@@ -230,24 +237,13 @@ export default function RootLayout({
                   </SidebarMenu>
                 </SidebarMenu>
               </SidebarContent>
-              <SidebarFooter className="p-4 flex items-center justify-between">
+              <SidebarFooter className="p-4 flex items-center justify-between border-t border-sidebar-border/50">
                 <ModeToggle />
                 <UserNav />
               </SidebarFooter>
             </Sidebar>
             <SidebarInset className="sidebar-inset-content relative">
-              <div className="absolute inset-0 -z-10 opacity-5 dark:opacity-[0.02] pointer-events-none">
-                 <svg width="100%" height="100%">
-                    <defs>
-                      <pattern id="main-bg-pattern" patternUnits="userSpaceOnUse" width="80" height="80" patternTransform="scale(1) rotate(45)">
-                        <circle cx="10" cy="10" r="1" fill="hsl(var(--foreground))" opacity="0.5"/>
-                        <circle cx="40" cy="40" r="1.5" fill="hsl(var(--foreground))" opacity="0.7"/>
-                         <path d="M0 40 H80 M40 0 V80" stroke="hsl(var(--foreground))" strokeWidth="0.2" opacity="0.3"/>
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#main-bg-pattern)" />
-                  </svg>
-              </div>
+              {/* The main content area background is styled via globals.css */}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}
@@ -269,4 +265,3 @@ export default function RootLayout({
     </html>
   );
 }
-

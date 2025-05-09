@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Brain, Zap, Loader2, Workflow, MessageSquare, Activity, CheckCircle2, AlertCircle, Lightbulb, Users, Wrench, ImageUp, Image as ImageIcon, Share2, SearchCode, SlidersHorizontal, BrainCircuit, TimerOff, ShieldCheck, Wand2, FileText, LinkIcon, Server, Edit3 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { neuroSynapse, type NeuroSynapseOutput, type NeuroSynapseInput, type SubTask as PageSubTask, type ToolUsage as PageToolUsage, type EthicalCompliance as PageEthicalCompliance } from '@/ai/flows/neuro-synapse-flow'; 
-import type { UserContext as NeuralInterfaceUserContext } from '@/ai/flows/interpret-user-intent-flow'; // Assuming this is for user context
+import type { UserContext as NeuralInterfaceUserContext } from '@/ai/flows/interpret-user-intent-flow';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,19 +38,26 @@ const NodeIcon: React.FC<{ type: NeuroSynapseOutput['workflowDiagramData']['node
   }
 };
 
-const WorkflowDiagramNode: React.FC<{ node: NeuroSynapseOutput['workflowDiagramData']['nodes'][0], style: React.CSSProperties }> = ({ node, style }) => (
+const WorkflowDiagramNode: React.FC<{ node: NeuroSynapseOutput['workflowDiagramData']['nodes'][0], style: React.CSSProperties, isActive?: boolean }> = ({ node, style, isActive }) => (
   <motion.div
     style={style}
     className="absolute transform transition-all duration-500 ease-out"
     initial={{ opacity: 0, scale: 0.5, ...style }}
-    animate={{ opacity: 1, scale: 1, ...style }}
+    animate={{ 
+        opacity: 1, 
+        scale: 1, 
+        ...style,
+        boxShadow: isActive ? `0 0 20px 5px hsla(var(--accent), 0.7)` : `0 10px 15px -3px hsla(var(--card-foreground)/0.1), 0 4px 6px -2px hsla(var(--card-foreground)/0.05)`,
+        borderColor: isActive ? `hsla(var(--accent), 0.9)` : `hsla(var(--primary)/0.2)`
+    }}
     exit={{ opacity: 0, scale: 0.5 }}
     transition={{ type: "spring", stiffness: 260, damping: 20 }}
   >
-    <Card className="w-40 h-28 p-2.5 flex flex-col items-center justify-center text-center shadow-xl hover:shadow-2xl transition-shadow duration-300 border-2 border-primary/20 hover:border-accent/70 bg-card/90 backdrop-blur-sm group">
+    <Card className={cn("w-40 h-28 p-2.5 flex flex-col items-center justify-center text-center transition-all duration-300 border-2 group bg-card/90 backdrop-blur-sm", isActive && "ring-2 ring-accent ring-offset-2 ring-offset-background")}>
       <NodeIcon type={node.type} className="w-8 h-8 mb-1.5 transition-transform group-hover:scale-110" />
       <span className="text-xs font-semibold text-foreground/95 truncate w-full px-1 group-hover:text-accent transition-colors">{node.label}</span>
       <span className="text-[10px] text-muted-foreground group-hover:text-accent/80 transition-colors">({node.type})</span>
+       {isActive && <motion.div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full animate-pulse" />}
     </Card>
   </motion.div>
 );
@@ -60,41 +67,45 @@ const WorkflowDiagramEdge: React.FC<{
   targetPos: { x: number; y: number };
   edge: NeuroSynapseOutput['workflowDiagramData']['edges'][0];
   delay: number;
-}> = ({ sourcePos, targetPos, edge, delay }) => {
+  isActive?: boolean;
+}> = ({ sourcePos, targetPos, edge, delay, isActive }) => {
   const nodeWidth = 160; 
   const nodeHeight = 112; 
 
   const sx = sourcePos.x + nodeWidth / 2;
-  const sy = sourcePos.y + nodeHeight / 2;
+  const sy = sourcePos.y + nodeHeight; // Edge starts from bottom center of source node
   const tx = targetPos.x + nodeWidth / 2;
-  const ty = targetPos.y + nodeHeight / 2;
+  const ty = targetPos.y; // Edge ends at top center of target node
   
-  const midX = (sx + tx) / 2;
-  const midY = (sy + ty) / 2;
+  // Control points for a smoother curve
+  const c1x = sx;
+  const c1y = sy + (ty - sy) * 0.4;
+  const c2x = tx;
+  const c2y = ty - (ty - sy) * 0.4;
 
-  const pathD = `M ${sx},${sy} L ${tx},${ty}`; // Straight line for simplicity, can be curved
+  const pathD = `M ${sx},${sy} C ${c1x},${c1y} ${c2x},${c2y} ${tx},${ty}`;
 
   return (
     <>
     <motion.path
       key={edge.id}
       d={pathD}
-      strokeWidth="2.5"
+      strokeWidth={isActive ? "3" : "2"}
       markerEnd="url(#arrowhead)"
-      className="stroke-primary/70 dark:stroke-primary/50"
+      className={cn(isActive ? "stroke-accent" : "stroke-primary/70 dark:stroke-primary/50", "transition-all duration-300")}
       initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: 1, opacity: 0.8 }}
-      transition={{ duration: 1.2, delay: delay, ease: "circOut" }}
+      animate={{ pathLength: 1, opacity: isActive ? 1 : 0.8 }}
+      transition={{ duration: 1, delay: delay + 0.2, ease: "circOut" }}
     />
     {edge.label && (
        <motion.text
-          x={midX}
-          y={midY - 5} // Offset slightly above the line
+          x={(sx + tx) / 2}
+          y={(sy + ty) / 2 - 8} // Offset slightly above the line midpoint
           textAnchor="middle"
-          className="fill-muted-foreground text-[10px] font-medium"
+          className={cn("fill-muted-foreground text-[10px] font-medium", isActive && "fill-accent font-semibold")}
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.7 }}
-          transition={{ delay: delay + 0.5, duration: 0.5 }}
+          transition={{ delay: delay + 0.7, duration: 0.5 }}
         >
           {edge.label}
         </motion.text>
@@ -103,17 +114,16 @@ const WorkflowDiagramEdge: React.FC<{
   );
 };
 
-const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'] | undefined }> = ({ data }) => {
+const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'] | undefined, activeNodeIds?: string[] }> = ({ data, activeNodeIds = [] }) => {
     const nodePositions = useMemo(() => {
       if (!data || !data.nodes || !data.nodes.length) return {};
       const positions: { [key: string]: { x: number; y: number } } = {};
       const nodeWidth = 160;
       const nodeHeight = 112;
-      const horizontalGap = 80;
-      const verticalGap = 60;
-      const diagramPadding = 40;
+      const horizontalGap = 60; // Reduced gap
+      const verticalGap = 70; // Reduced gap
+      const diagramPadding = 30;
 
-      // Simple layered layout (Sugiyama-style simplified)
       const graph: { [key: string]: string[] } = {};
       const inDegree: { [key: string]: number } = {};
       data.nodes.forEach(node => {
@@ -134,31 +144,31 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
         levels.push([...queue]);
         const nextQueue: string[] = [];
         for (const u of queue) {
-          for (const v of graph[u]) {
+          graph[u]?.forEach(v => {
             inDegree[v]--;
             if (inDegree[v] === 0) {
               nextQueue.push(v);
             }
-          }
+          });
         }
         queue = nextQueue;
       }
       
-      // Handle cycles by placing remaining nodes
-       if (data.nodes.length !== Object.values(positions).length) {
+       if (data.nodes.length !== levels.flat().length) {
         data.nodes.forEach(node => {
           if (!levels.flat().includes(node.id)) {
             if (levels.length === 0) levels.push([]);
-            levels[levels.length - 1].push(node.id); // Add to last level or a new one
+            levels[levels.length - 1].push(node.id); 
           }
         });
       }
 
-
       let currentY = diagramPadding;
-      levels.forEach((levelNodes, levelIndex) => {
+      levels.forEach((levelNodes) => {
+        const maxNodesInLevel = levels.reduce((max, l) => Math.max(max, l.length), 0);
+        const totalDiagramWidth = maxNodesInLevel * (nodeWidth + horizontalGap) - horizontalGap;
         const levelWidth = levelNodes.length * (nodeWidth + horizontalGap) - horizontalGap;
-        let currentX = diagramPadding + ( (levels.reduce((max, l) => Math.max(max, l.length), 0) * (nodeWidth + horizontalGap) - horizontalGap) - levelWidth) / 2; // Center level
+        let currentX = diagramPadding + (totalDiagramWidth - levelWidth) / 2; 
         
         levelNodes.forEach(nodeId => {
           positions[nodeId] = { x: currentX, y: currentY };
@@ -166,19 +176,19 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
         });
         currentY += nodeHeight + verticalGap;
       });
-       // Fallback for any nodes missed by leveling (should ideally not happen with good graph data)
-         data.nodes.forEach(node => { 
+      
+      data.nodes.forEach(node => { 
             if (!positions[node.id]) {
-                positions[node.id] = { x: Math.random() * 600 + 50, y: Math.random() * 400 + 50 };
+                positions[node.id] = { x: Math.random() * 500 + 50, y: Math.random() * 300 + 50 };
             }
-        });
+      });
 
       return positions;
     }, [data]);
 
   if (!data || !data.nodes || !data.nodes.length || !data.edges) {
     return (
-      <Card className="p-6 border rounded-lg bg-muted/30 text-center text-muted-foreground shadow-inner min-h-[450px] flex items-center justify-center">
+      <Card className="p-6 border rounded-lg bg-muted/30 text-center text-muted-foreground shadow-inner min-h-[650px] flex items-center justify-center">
         <AlertCircle className="w-10 h-10 mx-auto mb-3 text-destructive/70" />
         <p className="text-lg font-medium">Workflow diagram data is missing or incomplete.</p>
         <p className="text-sm">The AI orchestration might not have generated the visual structure.</p>
@@ -190,31 +200,39 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
   const allY = Object.values(nodePositions).map(p => p.y);
   const minX = Math.min(0, ...allX);
   const minY = Math.min(0, ...allY);
-  const maxX = Math.max(800, ...allX) + 160 + 50; 
-  const maxY = Math.max(600, ...allY) + 112 + 50;
+  const maxXCanvas = Math.max(800, ...allX) + 160 + 40; 
+  const maxYCanvas = Math.max(600, ...allY) + 112 + 40;
 
 
   return (
     <Card className="p-4 border-2 border-primary/20 rounded-xl bg-gradient-to-br from-card to-muted/10 shadow-2xl overflow-auto min-h-[650px] relative">
-      <svg width={maxX - minX + 40} height={maxY - minY + 40} viewBox={`${minX - 20} ${minY - 20} ${maxX - minX + 40} ${maxY - minY + 40}`} className="min-w-full min-h-full">
+      <svg width={maxXCanvas - minX + 40} height={maxYCanvas - minY + 40} viewBox={`${minX - 20} ${minY - 20} ${maxXCanvas - minX + 40} ${maxYCanvas - minY + 40}`} className="min-w-full min-h-full">
         <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth">
-            <polygon points="0 0, 10 3.5, 0 7" className="fill-primary/80" />
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+            <polygon points="0 0, 10 3.5, 0 7" className="fill-primary/80 group-hover:fill-accent transition-colors" />
           </marker>
            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
             <feMerge>
                 <feMergeNode in="coloredBlur"/>
                 <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
+           <filter id="nodeGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="nodeBlur"/>
+            <feMerge>
+                <feMergeNode in="nodeBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+           </filter>
         </defs>
-        <g className="edges" style={{filter: 'url(#glow)'}}>
+        <g className="edges">
           {data.edges.map((edge, index) => {
             const sourcePos = nodePositions[edge.source];
             const targetPos = nodePositions[edge.target];
             if (!sourcePos || !targetPos) return null;
-            return <WorkflowDiagramEdge key={edge.id} sourcePos={sourcePos} targetPos={targetPos} edge={edge} delay={0.5 + index * 0.12} />;
+            const edgeIsActive = activeNodeIds.includes(edge.source) && activeNodeIds.includes(edge.target);
+            return <WorkflowDiagramEdge key={edge.id} sourcePos={sourcePos} targetPos={targetPos} edge={edge} delay={0.5 + index * 0.1} isActive={edgeIsActive} />;
           })}
         </g>
       </svg>
@@ -222,7 +240,7 @@ const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'
         {data.nodes.map(node => {
             const pos = nodePositions[node.id];
             if (!pos) return null; 
-            return <WorkflowDiagramNode key={node.id} node={node} style={{ left: pos.x, top: pos.y }} />;
+            return <WorkflowDiagramNode key={node.id} node={node} style={{ left: pos.x, top: pos.y }} isActive={activeNodeIds.includes(node.id)} />;
         })}
       </div>
     </Card>
@@ -287,7 +305,7 @@ const SubTaskCard: React.FC<{ task: PageSubTask, index: number }> = ({ task, ind
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay: index * 0.08, ease: "circOut" }}
     >
-      <Card className={cn(`mb-3.5 shadow-lg transition-all hover:shadow-xl border-l-4 overflow-hidden`, statusColorClass, statusBgClass)}>
+      <Card className={cn(`mb-3.5 shadow-lg transition-all hover:shadow-xl border-l-4 overflow-hidden rounded-lg`, statusColorClass, statusBgClass)}>
         <CardHeader className="p-4 flex flex-row items-start justify-between space-x-3.5">
             <div className="flex-shrink-0 pt-0.5">
                  <IconComponent className={cn(`w-6 h-6`, statusTextColor, task.status?.toUpperCase().includes('GENERATING') || task.status?.toUpperCase().includes('ANALYZING') || task.status?.toUpperCase().includes('PROCESSING') ? 'animate-spin' : '')} />
@@ -390,6 +408,8 @@ export default function NeuroSynapsePage() {
 
   const [isMagicMode, setIsMagicMode] = useState(false);
   const [userActivityContext, setUserActivityContext] = useState<NeuralInterfaceUserContext | undefined>(undefined);
+  const [activeDiagramNodes, setActiveDiagramNodes] = useState<string[]>([]);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.ResizeObserver === 'undefined') {
@@ -429,7 +449,7 @@ export default function NeuroSynapsePage() {
 
   const handleMagicModeSuggest = async () => {
     if (!userActivityContext) {
-        toast({ title: "Magic Mode Unavailable", description: "User activity context is not available for suggestions.", variant: "default" });
+        toast({ title: "Mind Prompt Unavailable", description: "User activity context is not available for suggestions.", variant: "default" });
         setIsMagicMode(false);
         return;
     }
@@ -438,13 +458,14 @@ export default function NeuroSynapsePage() {
     setError(null);
     try {
         // Simulate calling interpretUserIntent or catalyzeIdea for prompt suggestion
+        // In a real app, this would call the catalyzeIdea flow
         const suggestedPrompt = `Based on your focus on '${userActivityContext.currentFocus}', explore how recent advancements in AI could revolutionize this area. Consider ethical implications and suggest 3 innovative applications.`;
         setPrompt(suggestedPrompt);
         toast({title: "Mind Prompt Activated!", description: "NeuroVichar analyzed your activity to suggest this challenge.", className: "bg-gradient-to-r from-purple-500 to-pink-500 text-white"});
     } catch (e: any) {
         const errorMessage = e instanceof Error ? e.message : "Failed to generate magic suggestion.";
         setError(errorMessage);
-        toast({ title: "Magic Mode Error", description: errorMessage, variant: "destructive"});
+        toast({ title: "Mind Prompt Error", description: errorMessage, variant: "destructive"});
     } finally {
         setIsLoading(false);
     }
@@ -455,10 +476,11 @@ export default function NeuroSynapsePage() {
     setIsLoading(true);
     setError(null);
     setResult(null); 
+    setActiveDiagramNodes(['start']); // Initial active node
     setCurrentLoadingMessage("Initializing Neuro Synapse cognitive orchestration...");
     
     try {
-      if (!prompt.trim() && !isMagicMode) { // Allow empty prompt if magic mode will generate one
+      if (!prompt.trim() && !isMagicMode) {
         setError('Please enter a prompt for Neuro Synapse or activate Mind Prompt.');
         setIsLoading(false);
         return;
@@ -467,18 +489,23 @@ export default function NeuroSynapsePage() {
       let imageDataUri: string | undefined = previewImage || undefined;
       
       const loadingMessages = [
-          "Dispatching prompt to Analyzer Agent for deconstruction...",
-          "Planner Agent is formulating a multi-agent execution strategy...",
-          "Cognitive tasks are being assigned to specialized Executor Agents...",
-          "AI agents are processing data streams...",
-          "Ethical Compliance Matrix is being cross-referenced...",
-          "Cross-agent debate and consensus simulation in progress (simulated)...",
-          "Synthesizing diverse insights into a unified response...",
-          "Finalizing the comprehensive Neuro Synapse output matrix..."
+          "Dispatching prompt to Analyzer Agent for deconstruction...", // analyzer_planner node
+          "Planner Agent is formulating a multi-agent execution strategy...", // analyzer_planner
+          "Cognitive tasks are being assigned to specialized Executor Agents...", // sub-task nodes
+          "AI agents are processing data streams and debating findings...", // sub-task nodes, ethical_reviewer_agent
+          "Synthesizing diverse insights into a unified response...", // result_synthesizer node
+          "Finalizing the comprehensive Neuro Synapse output matrix..." // final_output_node
       ];
       let msgIndex = 0;
       const msgInterval = setInterval(() => {
           setCurrentLoadingMessage(loadingMessages[msgIndex % loadingMessages.length]);
+          // Update active nodes based on current message phase (simplified)
+          if (msgIndex % loadingMessages.length === 0) setActiveDiagramNodes(['start', 'analyzer_planner']);
+          if (msgIndex % loadingMessages.length === 1) setActiveDiagramNodes(prev => [...prev, 'analyzer_planner']);
+          if (msgIndex % loadingMessages.length === 2 && result?.decomposedTasks) setActiveDiagramNodes(prev => [...prev, ...result.decomposedTasks.map(t => t.id)]);
+          if (msgIndex % loadingMessages.length === 3) setActiveDiagramNodes(prev => [...prev, 'ethical_reviewer_agent']);
+          if (msgIndex % loadingMessages.length === 4) setActiveDiagramNodes(prev => [...prev, 'result_synthesizer']);
+          if (msgIndex % loadingMessages.length === 5) setActiveDiagramNodes(prev => [...prev, 'final_output_node']);
           msgIndex++;
       }, 2500); 
 
@@ -486,11 +513,12 @@ export default function NeuroSynapsePage() {
         mainPrompt: prompt, 
         imageDataUri, 
         userContext: isMagicMode ? userActivityContext : undefined,
-        isMagicMode: isMagicMode && !prompt.trim() // Only true magic mode if prompt is empty
+        isMagicMode: isMagicMode && !prompt.trim() 
       };
       const response = await neuroSynapse(synapseInput);
       
       clearInterval(msgInterval); 
+      setActiveDiagramNodes(response.workflowDiagramData.nodes.map(n => n.id)); // All nodes active on completion for full view
 
       if(!response || !response.synthesizedAnswer){
         console.error("Incomplete response from Neuro Synapse flow:", response);
@@ -515,10 +543,9 @@ export default function NeuroSynapsePage() {
         description: errorMessage.length > 100 ? errorMessage.substring(0,97) + "..." : errorMessage,
         variant: "destructive",
       });
+       setActiveDiagramNodes([]); // Clear active nodes on error
     } finally {
       setIsLoading(false);
-      // Keep magic mode active if it was, user can turn it off
-      // setIsMagicMode(false); 
     }
   };
 
@@ -559,7 +586,7 @@ export default function NeuroSynapsePage() {
                     "bg-gradient-to-r text-white hover:shadow-xl transition-all transform hover:scale-105 active:scale-95",
                     isMagicMode 
                         ? "from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 ring-2 ring-offset-2 ring-purple-500" 
-                        : "from-gray-600 to-gray-800 hover:from-gray-700 hover:to-gray-900 border border-input"
+                        : "from-gray-600 to-gray-800 hover:from-gray-700 hover:to-gray-900 border border-input text-foreground hover:text-foreground" // Adjusted for better visibility
                 )}
               >
                 <Wand2 className={cn("mr-2 h-5 w-5", isMagicMode && "animate-pulse text-yellow-300")} /> {isMagicMode ? "Mind Prompt Active" : "Activate Mind Prompt"}
@@ -691,7 +718,7 @@ export default function NeuroSynapsePage() {
               <Separator className="bg-border/70" />
               <motion.section initial={{opacity:0, y:15}} animate={{opacity:1,y:0}} transition={{delay:0.6, duration:0.5, ease:"easeOut"}}>
                 <h3 className="text-2xl font-bold mb-5 text-foreground flex items-center gap-3"> <SlidersHorizontal className="w-8 h-8 text-blue-500 dark:text-blue-400" /> Visual Workflow Diagram </h3>
-                <WorkflowDiagram data={result.workflowDiagramData} />
+                <WorkflowDiagram data={result.workflowDiagramData} activeNodeIds={activeDiagramNodes} />
               </motion.section>
             </CardContent>
           </Card>
@@ -707,11 +734,11 @@ export default function NeuroSynapsePage() {
                     <p>Neuro Synapse, in this demonstration, showcases a cognitively inspired AI orchestration process. When you submit a prompt, Neuro Synapse initiates a simulated workflow using Genkit and LLMs:</p>
                     <ol className="list-decimal list-outside ml-5 space-y-2">
                         <li>
-                            <strong>Prompt Analysis &amp; Planning:</strong> An LLM analyzes your prompt (and image/user context if provided) to deconstruct it into logical sub-tasks and devise a high-level plan.
+                            <strong>Prompt Analysis & Planning:</strong> An LLM analyzes your prompt (and image/user context if provided) to deconstruct it into logical sub-tasks and devise a high-level plan.
                         </li>
                         <li>
                             <strong>Simulated Agent Execution:</strong> Each sub-task is "assigned" to a conceptual agent type (e.g., TextGenerator, ImageGenerator, WebBrowser). For this demo, these agents are simulated by:
-                            <ul className="list-disc list-inside ml-4 my-2">
+                            <ul className="list-disc list-inside ml-4 my-2 space-y-1">
                                 <li>Invoking specific Genkit flows (like `generateImage` or `summarizeWebPage`).</li>
                                 <li>Calling dedicated Genkit prompts for tasks like text generation, code generation, or image analysis.</li>
                                 <li>Utilizing services like `browseWebPage` for web content.</li>
@@ -731,7 +758,7 @@ export default function NeuroSynapsePage() {
                 </motion.div>
             </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6">
-            {[ { icon: <SearchCode className="w-7 h-7 text-accent" />, title: "Contextual Prompt Analysis", description: "AI deconstructs prompts, considering user activity for relevance." }, { icon: <Share2 className="w-7 h-7 text-accent" />, title: "Simulated Dynamic Orchestration", description: "Genkit flows and LLMs manage a multi-step reasoning process." }, { icon: <Users className="w-7 h-7 text-accent" />, title: "Conceptual Agent Execution", description: "Specialized Genkit prompts and flows act as AI agents." }, { icon: <Wand2 className="w-7 h-7 text-accent" />, title: "Mind Prompt Suggestions", description: "AI suggests tasks based on user's digital footprint and app behavior." }, { icon: <ShieldCheck className="w-7 h-7 text-accent" />, title: "Ethical Filtering", description: "Ensures outputs align with safety guidelines via LLM review." }, { icon: <Workflow className="w-7 h-7 text-accent" />, title: "Transparent Reasoning", description: "Visualizes workflow, agent activity, and tool usage for clarity." }, ].map((item, idx) => ( <motion.div key={item.title} initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{delay:0.3 + idx*0.05, duration:0.4}} className="p-4 bg-muted/40 dark:bg-muted/30 rounded-lg shadow-md border border-border/50"> <div className="flex items-center gap-3 mb-2"> {item.icon} <h4 className="text-md font-semibold text-foreground">{item.title}</h4> </div> <p className="text-xs text-muted-foreground">{item.description}</p> </motion.div> ))}
+            {[ { icon: <SearchCode className="w-7 h-7 text-accent" />, title: "Contextual Prompt Analysis", description: "AI deconstructs prompts, considering user activity for relevance." }, { icon: <Share2 className="w-7 h-7 text-accent" />, title: "Simulated Dynamic Orchestration", description: "Genkit flows and LLMs manage a multi-step reasoning process." }, { icon: <Users className="w-7 h-7 text-accent" />, title: "Conceptual Agent Execution", description: "Specialized Genkit prompts and flows act as AI agents." }, { icon: <Wand2 className="w-7 h-7 text-accent" />, title: "Mind Prompt Suggestions", description: "AI suggests tasks based on user's digital footprint and app behavior." }, { icon: <ShieldCheck className="w-7 h-7 text-accent" />, title: "Ethical Filtering", description: "Ensures outputs align with safety guidelines via LLM review." }, { icon: <Workflow className="w-7 h-7 text-accent" />, title: "Transparent Reasoning", description: "Visualizes workflow, agent activity, and tool usage for clarity." }, ].map((item, idx) => ( <motion.div key={item.title} initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{delay:0.3 + idx*0.05, duration:0.4}} className="p-4 bg-muted/40 dark:bg-muted/30 rounded-lg shadow-md border border-border/50 hover:shadow-lg hover:border-accent/50 transition-all"> <div className="flex items-center gap-3 mb-2"> {item.icon} <h4 className="text-md font-semibold text-foreground">{item.title}</h4> </div> <p className="text-xs text-muted-foreground">{item.description}</p> </motion.div> ))}
           </div>
         </CardContent>
       </Card>
@@ -739,4 +766,3 @@ export default function NeuroSynapsePage() {
     </div>
   );
 }
-
