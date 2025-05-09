@@ -1,10 +1,11 @@
+--
 'use client';
 
 import { useState, type FormEvent, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BrainCircuit, ChevronRight, Loader2, AlertCircle, Wand2, Info, HelpCircle, Search, LinkIcon, FileText, Settings2, Copy, Check, UserCircle, Activity, MessageSquare, Sparkles, Zap, Eye, Brain } from "lucide-react";
+import { BrainCircuit, ChevronRight, Loader2, AlertCircle, Wand2, Info, HelpCircle, Search, LinkIcon, FileText, Settings2, Copy, Check, UserCircle, Activity, MessageSquare, Sparkles, Zap, Eye, Brain, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { interpretUserIntent, type InterpretUserIntentOutput, type UserContext } from '@/ai/flows/interpret-user-intent-flow';
 import { neuroSynapse, type NeuroSynapseOutput, type NeuroSynapseInput } from '@/ai/flows/neuro-synapse-flow';
@@ -16,18 +17,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import Link from "next/link";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Textarea } from '@/components/ui/textarea'; // For displaying refined prompt
-import NeuroSynapseResultDisplay from '@/components/neuro-synapse-result-display'; // For displaying NeuroSynapse output
+import { Textarea } from '@/components/ui/textarea'; 
+import NeuroSynapseResultDisplay from '@/components/neuro-synapse-result-display';
+import { PermissionModal } from '@/components/permission-modal';
 
-const ActionIcon: React.FC<{ type: InterpretUserIntentOutput['suggestedActionType'] | undefined, className?: string }> = ({ type, className = "w-7 h-7" }) => {
-  switch (type) {
-    case 'NAVIGATE': return <LinkIcon className={cn(className, "text-blue-500 dark:text-blue-400")} />;
-    case 'EXECUTE_FLOW': return <Wand2 className={cn(className, "text-purple-500 dark:text-purple-400")} />;
-    case 'CLARIFY': return <HelpCircle className={cn(className, "text-yellow-500 dark:text-yellow-400")} />;
-    case 'INFORM': return <Info className={cn(className, "text-green-500 dark:text-green-400")} />;
-    default: return <Activity className={cn(className, "text-gray-500 dark:text-gray-400")} />;
-  }
-};
 
 const predefinedContexts: Record<string, { label: string; icon: React.ReactNode; context: UserContext; exampleActivity: string }> = {
   researcher: {
@@ -38,6 +31,11 @@ const predefinedContexts: Record<string, { label: string; icon: React.ReactNode;
       visitedPages: ["/neuro-synapse", "/docs/ai-models", "arxiv.org"],
       currentFocus: "Deep Research & Analysis",
       preferredTone: "formal",
+      activeApplications: ["Zotero", "Obsidian", "VS Code"],
+      calendarEvents: ["Review grant proposal deadline"],
+      timeOfDay: "afternoon",
+      deviceStatus: { batteryLevel: 75, isCharging: false, networkType: "WiFi"},
+      interactionFootprints: { typingRhythm: "moderate", appSwitchFrequency: "low" }
     },
     exampleActivity: "Currently focused on a research paper about AI ethics, with recent searches on quantum computing."
   },
@@ -49,6 +47,11 @@ const predefinedContexts: Record<string, { label: string; icon: React.ReactNode;
       visitedPages: ["/plugin-marketplace", "github.com/neurovichar", "/docs/api"],
       currentFocus: "Coding & API Integration",
       preferredTone: "technical",
+      activeApplications: ["VS Code", "Docker Desktop", "Terminal"],
+      calendarEvents: ["Sprint planning meeting"],
+      timeOfDay: "morning",
+      deviceStatus: { batteryLevel: 90, isCharging: true, networkType: "Ethernet"},
+      interactionFootprints: { typingRhythm: "fast", copyPasteActivity: true, appSwitchFrequency: "medium" }
     },
     exampleActivity: "Working on a new plugin for NeuroVichar, frequently visiting API docs and GitHub."
   },
@@ -57,9 +60,14 @@ const predefinedContexts: Record<string, { label: string; icon: React.ReactNode;
     icon: <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />,
     context: {
       recentSearches: ["surreal art styles", "AI generated music prompts", "character design inspiration"],
-      visitedPages: ["/ai-image-generation", "/idea-catalyst", "pinterest.com"],
+      visitedPages: ["/ai-image-generation", "/idea-catalyst", "pinterest.com", "behance.net"],
       currentFocus: "Content Creation & Brainstorming",
       preferredTone: "casual",
+      activeApplications: ["Photoshop", "Figma", "Spotify"],
+      calendarEvents: ["Client feedback session", "Moodboard presentation"],
+      timeOfDay: "evening",
+      deviceStatus: { batteryLevel: 60, isCharging: false, networkType: "WiFi"},
+      interactionFootprints: { typingRhythm: "moderate", appSwitchFrequency: "high" }
     },
     exampleActivity: "Exploring visual ideas for a new project, frequently using image generation and idea catalyst."
   },
@@ -68,9 +76,14 @@ const predefinedContexts: Record<string, { label: string; icon: React.ReactNode;
     icon: <UserCircle className="mr-2 h-4 w-4 opacity-60" />,
     context: {
       recentSearches: ["how to use NeuroVichar", "best AI tools 2024"],
-      visitedPages: ["/", "/help"],
+      visitedPages: ["/", "/help", "/profile"],
       currentFocus: "Platform Exploration",
       preferredTone: "casual",
+      activeApplications: ["Browser", "Email Client"],
+      calendarEvents: [],
+      timeOfDay: "any",
+      deviceStatus: { batteryLevel: 80, isCharging: false, networkType: "WiFi"},
+      interactionFootprints: { typingRhythm: "moderate", appSwitchFrequency: "low" }
     },
     exampleActivity: "Browsing NeuroVichar features, learning about AI capabilities."
   }
@@ -88,22 +101,73 @@ export default function NeuralInterfacePage() {
   const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
 
+  const [permissionStatus, setPermissionStatus] = useState<'unknown' | 'allowed' | 'denied'>('unknown');
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+
+  useEffect(() => {
+    const storedPermission = localStorage.getItem('neuroVicharTrackingPermission');
+    if (storedPermission === 'allowed') {
+      setPermissionStatus('allowed');
+    } else if (storedPermission === 'denied') {
+      setPermissionStatus('denied');
+    } else {
+      setPermissionStatus('unknown');
+      setShowPermissionModal(true);
+    }
+  }, []);
+
+  const handleAllowPermission = () => {
+    localStorage.setItem('neuroVicharTrackingPermission', 'allowed');
+    setPermissionStatus('allowed');
+    setShowPermissionModal(false);
+    toast({
+      title: "Permissions Granted",
+      description: "Neural Interface will now use contextual data for enhanced suggestions.",
+      className: "bg-green-500 text-white border-green-600"
+    });
+  };
+
+  const handleDenyPermission = () => {
+    localStorage.setItem('neuroVicharTrackingPermission', 'denied');
+    setPermissionStatus('denied');
+    setShowPermissionModal(false);
+     toast({
+      title: "Permissions Denied",
+      description: "Neural Interface will operate with limited contextual understanding.",
+      variant: "destructive"
+    });
+  };
+
+
   const currentUserContext = predefinedContexts[selectedContextKey]?.context || {};
 
   const handleContextChange = useCallback((key: string) => {
     setSelectedContextKey(key);
-    setIntentResult(null); // Clear previous intent results when context changes
-    setSynapseResult(null); // Clear previous synapse results
+    setIntentResult(null); 
+    setSynapseResult(null); 
   }, []);
   
   const handleNeuroVicharActivation = async () => {
+    if (permissionStatus !== 'allowed') {
+      setShowPermissionModal(true);
+      toast({
+        title: "Permission Required",
+        description: "Please allow background activity tracking to use the full Neural Interface capabilities.",
+        variant: "default"
+      });
+      return;
+    }
+
     setIsLoadingIntent(true);
     setError(null);
     setIntentResult(null);
     setSynapseResult(null);
 
     try {
-      const response = await interpretUserIntent({ userQuery: "Infer intent based on my current context.", userContext: currentUserContext });
+      const response = await interpretUserIntent({ 
+        userQuery: "Infer intent based on my current context.", 
+        userContext: permissionStatus === 'allowed' ? currentUserContext : { preferredTone: currentUserContext.preferredTone || "casual"} 
+      });
       setIntentResult(response);
       toast({
         title: "Intent Inferred!",
@@ -121,7 +185,7 @@ export default function NeuralInterfacePage() {
   };
 
   const handleEngageSynapse = async () => {
-    if (!intentResult?.refinedPrompt) {
+    if (!intentResult?.softPromptForSynapse) {
       setError("No inferred prompt available to send to Neuro Synapse.");
       toast({ title: "Synapse Error", description: "Cannot proceed without an inferred prompt.", variant: "destructive" });
       return;
@@ -132,9 +196,9 @@ export default function NeuralInterfacePage() {
 
     try {
       const synapseInput: NeuroSynapseInput = {
-        mainPrompt: intentResult.refinedPrompt,
-        userContext: currentUserContext, // Pass the context for potential deeper use in Synapse
-        isMagicMode: true // Indicate this prompt originated from an inferred context
+        mainPrompt: intentResult.softPromptForSynapse,
+        userContext: permissionStatus === 'allowed' ? currentUserContext : undefined, 
+        isMagicMode: true 
       };
       const response = await neuroSynapse(synapseInput);
       setSynapseResult(response);
@@ -155,8 +219,8 @@ export default function NeuralInterfacePage() {
 
 
   const handleCopyPrompt = () => {
-    if (intentResult?.refinedPrompt) {
-      navigator.clipboard.writeText(intentResult.refinedPrompt)
+    if (intentResult?.softPromptForSynapse) {
+      navigator.clipboard.writeText(intentResult.softPromptForSynapse)
         .then(() => {
           setIsCopied(true);
           toast({ title: "Prompt Copied!", description: "The inferred prompt is now in your clipboard." });
@@ -169,14 +233,21 @@ export default function NeuralInterfacePage() {
     }
   };
   
-  const getConfidenceColor = (confidence: number): string => {
-    if (confidence < 0.3) return 'bg-red-500';
-    if (confidence < 0.7) return 'bg-yellow-500';
-    return 'bg-green-500';
-  };
-
   return (
     <div className="space-y-12 min-h-screen">
+      <PermissionModal
+        isOpen={showPermissionModal}
+        onAllow={handleAllowPermission}
+        onDeny={handleDenyPermission}
+        onClose={() => {
+          // If user closes without deciding and status is still unknown, consider it denied for this session
+          if (permissionStatus === 'unknown') {
+            handleDenyPermission(); // Or set to a temporary 'dismissed' state
+          } else {
+            setShowPermissionModal(false);
+          }
+        }}
+      />
       <header className="relative text-center py-16 md:py-24 overflow-hidden rounded-xl bg-gradient-to-br from-primary/80 via-accent/70 to-pink-500/80 shadow-2xl">
         <div className="absolute inset-0 opacity-20" style={{backgroundImage: "url('/circuit-board.svg')"}}></div>
         <div className="relative z-10">
@@ -218,6 +289,7 @@ export default function NeuralInterfacePage() {
               <CardTitle className="text-xl flex items-center gap-2.5 text-foreground/90"><UserCircle className="w-7 h-7 text-accent"/>Simulate Your Context</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
                 Choose a persona to simulate different background activities and preferences. NeuroVichar will use this to infer your intent.
+                 {permissionStatus === 'denied' && <span className="block text-yellow-600 dark:text-yellow-400 text-xs mt-1">Contextual features are limited due to denied permissions.</span>}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3.5">
@@ -252,7 +324,7 @@ export default function NeuralInterfacePage() {
           <Card className="shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 bg-card/90 backdrop-blur-lg border-2 border-accent/30">
             <CardHeader className="text-center">
               <motion.div
-                key={selectedContextKey} // Re-animate on context change
+                key={selectedContextKey} 
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 150, damping: 12 }}
@@ -265,9 +337,20 @@ export default function NeuralInterfacePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
+                {permissionStatus === 'denied' && (
+                  <Alert variant="destructive" className="mb-6 text-left shadow-md">
+                    <ShieldAlert className="h-5 w-5" />
+                    <AlertTitle>Permissions Denied</AlertTitle>
+                    <AlertDescription>
+                      The Neural Interface requires background activity tracking permissions to function optimally. 
+                      Please enable them in your settings or click "Allow" in the permission prompt if it reappears.
+                      <Button variant="link" onClick={() => setShowPermissionModal(true)} className="p-0 h-auto ml-1 text-destructive hover:underline">Re-show Permission Prompt</Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <Button 
                   onClick={handleNeuroVicharActivation}
-                  disabled={isLoadingIntent || isLoadingSynapse} 
+                  disabled={isLoadingIntent || isLoadingSynapse || permissionStatus !== 'allowed'} 
                   size="lg" 
                   className="text-xl px-12 py-8 shadow-xl hover:shadow-accent/40 transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-br from-accent via-pink-500 to-purple-600 text-primary-foreground rounded-xl group"
                 >
@@ -297,7 +380,33 @@ export default function NeuralInterfacePage() {
       
           <AnimatePresence>
             {isLoadingIntent && (
-              <motion.div /* Loading for Intent */ > {/* ... existing loading ... */} </motion.div>
+               <motion.div 
+                key="loading-indicator-ni-intent"
+                initial={{ opacity: 0, height: 0, y: 20 }}
+                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -20, transition: {duration: 0.25} }}
+                className="mt-8"
+              >
+                <Card className="shadow-xl bg-card/85 backdrop-blur-sm border-purple-500/20">
+                  <CardContent className="p-8 text-center space-y-5">
+                    <motion.div
+                      animate={{ rotate: [0, 360], scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Eye className="mx-auto h-14 w-14 text-purple-500" />
+                    </motion.div>
+                    <p className="text-lg text-muted-foreground font-medium">Interpreting your digital aura... This may take a few seconds.</p>
+                    <div className="w-full bg-muted rounded-full h-3.5 dark:bg-gray-700 overflow-hidden">
+                      <motion.div 
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 h-3.5 rounded-full"
+                        initial={{ width: "0%" }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", ease:"easeInOut" }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
           </AnimatePresence>
 
@@ -322,17 +431,19 @@ export default function NeuralInterfacePage() {
                       </CardTitle>
                       <CardDescription className="text-base mt-1 text-muted-foreground">
                         Based on your <strong className="text-foreground/80">{predefinedContexts[selectedContextKey]?.label || "selected"}</strong> context.
+                         Confidence: <Progress value={(intentResult.confidence || 0) * 100} className="w-24 h-2 inline-block ml-1" indicatorClassName={cn(intentResult.confidence > 0.7 ? 'bg-green-500' : intentResult.confidence > 0.4 ? 'bg-yellow-500' : 'bg-red-500')} />
+                         <span className="ml-1 text-xs">({((intentResult.confidence || 0) * 100).toFixed(0)}%)</span>
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6 p-6 md:p-8">
                   <motion.div initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay:0.1, duration:0.4, ease: "easeOut"}}>
-                    <Label className="text-sm font-semibold text-muted-foreground tracking-wider uppercase">AI's Interpretation:</Label>
-                    <p className="text-lg text-foreground/95 p-4 mt-1.5 bg-muted/50 rounded-lg shadow-md border border-primary/20">{intentResult.interpretation}</p>
+                    <Label className="text-sm font-semibold text-muted-foreground tracking-wider uppercase">AI's Inferred Goal:</Label>
+                    <p className="text-lg text-foreground/95 p-4 mt-1.5 bg-muted/50 rounded-lg shadow-md border border-primary/20">{intentResult.inferredIntent}</p>
                   </motion.div>
 
-                  {intentResult.refinedPrompt && (
+                  {intentResult.softPromptForSynapse && (
                     <motion.div initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay:0.2, duration:0.4, ease: "easeOut"}}>
                       <div className="flex justify-between items-center mb-1.5">
                         <Label className="text-sm font-semibold text-muted-foreground tracking-wider uppercase">Generated Prompt for NeuroSynapse:</Label>
@@ -342,7 +453,7 @@ export default function NeuralInterfacePage() {
                         </Button>
                       </div>
                       <Textarea 
-                          value={intentResult.refinedPrompt} 
+                          value={intentResult.softPromptForSynapse} 
                           readOnly 
                           className="text-md bg-muted/50 border-dashed border-accent/30 min-h-[120px] p-3.5 rounded-lg shadow-inner focus-visible:ring-accent focus-visible:border-accent"
                       />
@@ -361,7 +472,7 @@ export default function NeuralInterfacePage() {
                    <div className="pt-4 text-center">
                         <Button 
                           onClick={handleEngageSynapse}
-                          disabled={isLoadingSynapse || !intentResult.refinedPrompt} 
+                          disabled={isLoadingSynapse || !intentResult.softPromptForSynapse} 
                           size="lg" 
                           className="text-lg px-10 py-7 shadow-xl hover:shadow-green-500/30 transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-primary-foreground rounded-lg group"
                         >
@@ -432,3 +543,5 @@ export default function NeuralInterfacePage() {
     </div>
   );
 }
+
+    
