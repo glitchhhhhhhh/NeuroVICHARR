@@ -3,7 +3,7 @@
 import React from 'react'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"; 
-import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store, Sparkles, Rocket, Eye } from "lucide-react"; // Added Eye for NeuroShastra
+import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store, Sparkles, Rocket, Eye } from "lucide-react";
 import Link from "next/link";
 import { motion } from 'framer-motion';
 
@@ -18,7 +18,7 @@ const aiFeatures = [
   {
     title: "NeuroShastra",
     description: "NeuroShastra is the sacred science of thought-to-task AI—decoding your digital behavior, learning your intent, and delivering solutions without you ever lifting a finger.",
-    icon: <Eye className="w-8 h-8 text-accent" />, // Using Eye icon for NeuroShastra
+    icon: <Eye className="w-8 h-8 text-accent" />,
     href: "/neuroshastra",
     tag: "Zero-Input AI"
   },
@@ -162,7 +162,7 @@ const AnimatedSectionTitle: React.FC<{ children: React.ReactNode, className?: st
 export default function DashboardPage() {
   const heroTitlePrefix = "Welcome to ";
   const heroTitleMain = "NeuroVichar";
-  const heroSubtitle = "Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with inteliigence";
+  const heroSubtitle = "Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with intelligence";
 
   const titleVariants = {
     hidden: { opacity: 0 },

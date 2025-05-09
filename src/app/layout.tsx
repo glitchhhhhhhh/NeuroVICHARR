@@ -5,7 +5,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn, BrainCircuit, Sparkles, Rocket, UserPlus, Eye } from 'lucide-react'; // Added Eye icon
+import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn, BrainCircuit, Sparkles, Rocket, UserPlus, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
@@ -35,8 +35,8 @@ const inter = Inter({
 
 
 export const metadataObject: Metadata = {
-  title: 'NeuroVichar - Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with inteliigence',
-  description: 'Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with inteliigence',
+  title: 'NeuroVichar - Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with intelligence',
+  description: 'Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with intelligence',
 };
 
 export default function RootLayout({
@@ -56,7 +56,7 @@ export default function RootLayout({
        const initialTimer = setTimeout(() => {
          setIsLoadingPage(false);
          setInitialLoadComplete(true);
-       }, 250); 
+       }, 100); // Reduced initial load time for faster first paint
        return () => clearTimeout(initialTimer);
     }
   }, [initialLoadComplete]);
@@ -66,7 +66,7 @@ export default function RootLayout({
       setIsLoadingPage(true);
       const fallbackTimer = setTimeout(() => {
         setIsLoadingPage(false);
-      }, 600); 
+      }, 250); // Reduced fallback timer
       return () => clearTimeout(fallbackTimer);
     } else if (isAuthPage) {
       setIsLoadingPage(false); 
@@ -77,6 +77,7 @@ export default function RootLayout({
     if (pathname === '/login') return "Authenticating...";
     if (pathname === '/signup') return "Creating Account...";
     if (pathname === '/neuroshastra') return "Awakening NeuroShastra...";
+    if (pathname === '/parallel-processing' || pathname === '/distributed-power' || pathname === '/sub-prompt-decomposition' ) return "Initializing Core Module..."
     return "Initializing Synapses...";
   };
 
@@ -103,7 +104,7 @@ export default function RootLayout({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.25, ease: "easeInOut" }} 
+                    transition={{ duration: 0.20, ease: "easeInOut" }} // Faster transition
                     onAnimationComplete={() => {if(isAuthPage) setIsLoadingPage(false)}} 
                     className="w-full max-w-md" 
                     >
@@ -125,12 +126,12 @@ export default function RootLayout({
         <title>{String(metadataObject.title)}</title>
         <meta name="description" content={String(metadataObject.description)} />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased animated-bg-pattern`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
-          disableTransitionOnChange
+          disableTransitionOnChange // Already set to true, good for preventing theme flash
         >
           {isLoadingPage && <NeuroVicharLoadingLogo text={getLoadingText()} />}
           <SidebarProvider defaultOpen>
@@ -272,14 +273,14 @@ export default function RootLayout({
               </SidebarFooter>
             </Sidebar>
             <SidebarInset className="sidebar-inset-content relative"> 
-              <div className="absolute inset-0 -z-10 animated-bg-pattern opacity-5 dark:opacity-[0.02] pointer-events-none" />
+              {/* Removed animated-bg-pattern from here, applied to body */}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}
-                  initial={{ opacity: 0, y: 10 }} 
+                  initial={{ opacity: 0, y: 15 }} // Slightly reduced y for faster feel
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }} 
-                  transition={{ duration: 0.25, ease: "easeInOut" }} 
+                  exit={{ opacity: 0, y: -15 }} 
+                  transition={{ duration: 0.20, ease: "easeInOut" }} // Faster page transition
                   onAnimationComplete={() => setIsLoadingPage(false)} 
                   className="p-4 md:p-6 lg:p-8 min-h-[calc(100vh-theme(spacing.4)-theme(spacing.4))] md:min-h-screen" 
                 >
