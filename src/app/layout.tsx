@@ -46,30 +46,45 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname === '/signup'; 
-  const [isLoadingPage, setIsLoadingPage] = useState(false); // Initialize to false to prevent hydration mismatch
+  const [isLoadingPage, setIsLoadingPage] = useState(false); 
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+
 
   useEffect(() => {
-    if (!isAuthPage) {
-      // For initial load or route changes, briefly show loader
-      // This will run after initial hydration
+    // This effect manages the visibility of the global loading screen.
+    // It shows the loader when navigating to a new non-authentication page.
+    // The loader is primarily hidden by the `onAnimationComplete` callback of the main content's motion.div.
+    // The setTimeout here is a fallback to ensure the loader doesn't get stuck if onAnimationComplete fails to fire.
+
+    if (!initialLoadComplete) {
+       // For the very first load, show loader and then hide after a short delay.
+       setIsLoadingPage(true);
+       const initialTimer = setTimeout(() => {
+         setIsLoadingPage(false);
+         setInitialLoadComplete(true);
+       }, 700); // Reduced initial loading time
+       return () => clearTimeout(initialTimer);
+    }
+
+
+    if (!isAuthPage && initialLoadComplete) {
       setIsLoadingPage(true); 
 
-      // Fallback timer to hide loader if onAnimationComplete doesn't fire for some reason
-      // Primary mechanism is onAnimationComplete of the motion.div wrapping children
       const timer = setTimeout(() => {
         setIsLoadingPage(currentIsLoading => {
-          // Only set to false if it's still true (e.g., animation didn't complete or component unmounted)
-          if (currentIsLoading) return false;
+          if (currentIsLoading) { 
+            // console.warn("Loading fallback timer triggered. Investigate if page animations are not completing.");
+            return false;
+          }
           return currentIsLoading; 
         });
-      }, 3000); // Increased fallback, adjust as necessary
+      }, 700); // Reduced fallback timer for page transitions
 
       return () => clearTimeout(timer);
     } else {
-      // For auth pages, ensure loader is not shown after initial checks
       setIsLoadingPage(false); 
     }
-  }, [pathname, isAuthPage]); 
+  }, [pathname, isAuthPage, initialLoadComplete]); 
 
 
   if (isAuthPage) {
@@ -86,16 +101,15 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {/* Minimal loader for auth pages, or none if handled by their own AnimatePresence */}
             {isLoadingPage && <NeuroVicharLoadingLogo text="Loading Page..." />}
             <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/20 dark:from-background dark:to-muted/10 p-4">
                 <AnimatePresence mode="wait">
                     <motion.div
-                    key={pathname} // Ensure auth pages also animate distinctly
+                    key={pathname} 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }} // Faster transition
                     onAnimationComplete={() => {if(isAuthPage) setIsLoadingPage(false)}} 
                     className="w-full max-w-md" 
                     >
@@ -259,11 +273,11 @@ export default function RootLayout({
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}
-                  initial={{ opacity: 0, y: 15 }}
+                  initial={{ opacity: 0, y: 10 }} // Reduced y offset
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.35, ease: "easeInOut" }}
-                  onAnimationComplete={() => setIsLoadingPage(false)}
+                  exit={{ opacity: 0, y: -10 }} // Reduced y offset
+                  transition={{ duration: 0.25, ease: "easeInOut" }} // Faster transition
+                  onAnimationComplete={() => setIsLoadingPage(false)} 
                   className="p-4 md:p-6 lg:p-8 min-h-[calc(100vh-theme(spacing.4)-theme(spacing.4))] md:min-h-screen" 
                 >
                   {children}
@@ -275,6 +289,4 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  );
-}
-
+  )
