@@ -37,6 +37,9 @@ const inter = Inter({
 export const metadataObject: Metadata = {
   title: 'NeuroVichar - Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with intelligence',
   description: 'Vichar Before Prahar: Turning Your Neural Thoughts into Collaborative Code Solutions with intelligence',
+  icons: {
+    icon: '/favicon.ico', // Add this line
+  },
 };
 
 export default function RootLayout({
@@ -51,25 +54,27 @@ export default function RootLayout({
 
 
   useEffect(() => {
+    // This effect handles the very first load of the application
     if (!initialLoadComplete) {
-       setIsLoadingPage(true);
+       setIsLoadingPage(true); // Show loader on very first load
        const initialTimer = setTimeout(() => {
-         setIsLoadingPage(false);
-         setInitialLoadComplete(true);
-       }, 100); // Reduced initial load time for faster first paint
+         setIsLoadingPage(false); // Hide loader
+         setInitialLoadComplete(true); // Mark initial load as done
+       }, 100); // Short delay for initial load
        return () => clearTimeout(initialTimer);
     }
   }, [initialLoadComplete]);
 
   useEffect(() => {
-    if (initialLoadComplete && !isAuthPage) {
-      setIsLoadingPage(true);
-      const fallbackTimer = setTimeout(() => {
-        setIsLoadingPage(false);
-      }, 250); // Reduced fallback timer
-      return () => clearTimeout(fallbackTimer);
+    // This effect handles loading state for subsequent page navigations
+    if (initialLoadComplete && !isAuthPage) { // Only run if initial load is complete and not an auth page
+      setIsLoadingPage(true); // Show loader for page transition
+      const pageTransitionTimer = setTimeout(() => {
+        setIsLoadingPage(false); // Hide loader after a short delay for transition
+      }, 200); // Adjusted delay for page transitions
+      return () => clearTimeout(pageTransitionTimer);
     } else if (isAuthPage) {
-      setIsLoadingPage(false); 
+      setIsLoadingPage(false); // Ensure loader is hidden for auth pages without delay
     }
   }, [pathname, isAuthPage, initialLoadComplete]);
 
@@ -104,7 +109,7 @@ export default function RootLayout({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.20, ease: "easeInOut" }} // Faster transition
+                    transition={{ duration: 0.20, ease: "easeInOut" }}
                     onAnimationComplete={() => {if(isAuthPage) setIsLoadingPage(false)}} 
                     className="w-full max-w-md" 
                     >
@@ -126,12 +131,12 @@ export default function RootLayout({
         <title>{String(metadataObject.title)}</title>
         <meta name="description" content={String(metadataObject.description)} />
       </head>
-      <body className={`${inter.variable} font-sans antialiased animated-bg-pattern`}>
+      <body className={`${inter.variable} font-sans antialiased`}> {/* Removed animated-bg-pattern from body, it's on SidebarInset wrapper now */}
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
-          disableTransitionOnChange // Already set to true, good for preventing theme flash
+          disableTransitionOnChange
         >
           {isLoadingPage && <NeuroVicharLoadingLogo text={getLoadingText()} />}
           <SidebarProvider defaultOpen>
@@ -164,7 +169,7 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="NeuroShastra: Zero-Input AI" size="lg">
+                    <SidebarMenuButton asChild tooltip="NeuroShastra" size="lg">
                       <Link href="/neuroshastra">
                          <Eye /> 
                         <span>NeuroShastra</span>
@@ -272,22 +277,24 @@ export default function RootLayout({
                 <UserNav />
               </SidebarFooter>
             </Sidebar>
-            <SidebarInset className="sidebar-inset-content relative"> 
-              {/* Removed animated-bg-pattern from here, applied to body */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={pathname}
-                  initial={{ opacity: 0, y: 15 }} // Slightly reduced y for faster feel
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }} 
-                  transition={{ duration: 0.20, ease: "easeInOut" }} // Faster page transition
-                  onAnimationComplete={() => setIsLoadingPage(false)} 
-                  className="p-4 md:p-6 lg:p-8 min-h-[calc(100vh-theme(spacing.4)-theme(spacing.4))] md:min-h-screen" 
-                >
-                  {children}
-                </motion.div>
-              </AnimatePresence>
-            </SidebarInset>
+            {/* Added animated-bg-pattern to this wrapper div */}
+            <div className="flex-1 relative animated-bg-pattern">
+              <SidebarInset> 
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={pathname}
+                    initial={{ opacity: 0, y: 15 }} 
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }} 
+                    transition={{ duration: 0.20, ease: "easeInOut" }}
+                    onAnimationComplete={() => {if (!isAuthPage) setIsLoadingPage(false)}} 
+                    className="p-4 md:p-6 lg:p-8 min-h-screen" // Simplified min-height
+                  >
+                    {children}
+                  </motion.div>
+                </AnimatePresence>
+              </SidebarInset>
+            </div>
           </SidebarProvider>
           <Toaster />
         </ThemeProvider>
@@ -295,4 +302,3 @@ export default function RootLayout({
     </html>
   );
 }
-

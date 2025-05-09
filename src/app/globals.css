@@ -111,7 +111,6 @@ body {
   body {
     @apply bg-background text-foreground;
   }
-  /* The animated-bg-pattern is applied to a specific div inside SidebarInset in layout.tsx */
 
   ::selection {
     background-color: hsla(var(--accent), 0.7); /* Using accent for selection */
@@ -202,25 +201,22 @@ button, a, input, textarea, select {
 }
 
 
-/* Subtle animated background pattern for main content area within SidebarInset */
+/* Subtle animated background pattern for main content area wrapper in layout.tsx */
 @keyframes pattern-flow {
   0% { background-position: 0 0; }
-  100% { background-position: -100px 100px; } /* Increased movement for more noticeable but still subtle effect */
+  100% { background-position: -100px 100px; } 
 }
 
-/* Updated .animated-bg-pattern to be more subtle and "techy" */
 .animated-bg-pattern {
-  /* Light mode pattern: very subtle primary and accent dots */
   background-image:
-    radial-gradient(hsla(var(--primary), 0.025) 0.5px, transparent 0.5px), /* Smaller, more transparent primary dots */
-    radial-gradient(hsla(var(--accent), 0.02) 0.5px, transparent 0.5px);   /* Smaller, more transparent accent dots */
-  background-size: 50px 50px, 50px 50px; /* Sparsert pattern */
-  background-position: 0 0, 25px 25px; /* offset for interweaving */
-  animation: pattern-flow 40s linear infinite; /* Slower, more gentle flow */
+    radial-gradient(hsla(var(--primary), 0.025) 0.5px, transparent 0.5px), 
+    radial-gradient(hsla(var(--accent), 0.02) 0.5px, transparent 0.5px);  
+  background-size: 50px 50px, 50px 50px; 
+  background-position: 0 0, 25px 25px; 
+  animation: pattern-flow 40s linear infinite; 
 }
 
 .dark .animated-bg-pattern {
-  /* Dark mode pattern: slightly more visible but still very subtle dots */
   background-image:
     radial-gradient(hsla(var(--primary), 0.04) 0.5px, transparent 0.5px),
     radial-gradient(hsla(var(--accent), 0.03) 0.5px, transparent 0.5px);
@@ -229,17 +225,25 @@ button, a, input, textarea, select {
   animation: pattern-flow 40s linear infinite;
 }
 
-/* General page entrance animation helper (if needed, Framer Motion is preferred) */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(15px); /* Reduced from 20px */
+/* General page entrance animation helper (if needed, Framer Motion is preferred for per-component control) */
+@layer utilities {
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .animate-fadeInUp {
+    animation: fadeInUp 0.4s ease-out forwards;
   }
-}
-.animate-fadeInUp { /* Example definition if not using Framer Motion for everything */
-  animation: fadeInUp 0.4s ease-out forwards; /* Faster animation */
+  /* Example of how to apply motion-safe if needed, but Framer Motion is generally better */
+  .motion-safe\:animate-fadeInUp {
+    @media (prefers-reduced-motion: no-preference) {
+      animation: fadeInUp 0.4s ease-out forwards;
+    }
+  }
 }
