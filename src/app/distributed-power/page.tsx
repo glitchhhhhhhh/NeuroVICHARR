@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Share2, LifeBuoy, AlertCircle, Zap, ShieldOff } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
-import Image from 'next/image';
+// Removed unused: import Image from 'next/image';
 
 export default function DistributedPowerPage() {
   const sectionVariants = {
