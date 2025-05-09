@@ -5,7 +5,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn, BrainCircuit, Sparkles, Rocket, UserPlus } from 'lucide-react';
+import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn, BrainCircuit, Sparkles, Rocket, UserPlus, Eye } from 'lucide-react'; // Added Eye icon
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
@@ -56,7 +56,7 @@ export default function RootLayout({
        const initialTimer = setTimeout(() => {
          setIsLoadingPage(false);
          setInitialLoadComplete(true);
-       }, 300); // Shortened initial loading time
+       }, 250); 
        return () => clearTimeout(initialTimer);
     }
   }, [initialLoadComplete]);
@@ -66,12 +66,19 @@ export default function RootLayout({
       setIsLoadingPage(true);
       const fallbackTimer = setTimeout(() => {
         setIsLoadingPage(false);
-      }, 800); // Fallback if page content animation takes too long
+      }, 600); 
       return () => clearTimeout(fallbackTimer);
     } else if (isAuthPage) {
       setIsLoadingPage(false); 
     }
   }, [pathname, isAuthPage, initialLoadComplete]);
+
+  const getLoadingText = () => {
+    if (pathname === '/login') return "Authenticating...";
+    if (pathname === '/signup') return "Creating Account...";
+    if (pathname === '/neuroshastra') return "Awakening NeuroShastra...";
+    return "Initializing Synapses...";
+  };
 
 
   if (isAuthPage) {
@@ -88,7 +95,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {isLoadingPage && <NeuroVicharLoadingLogo text={pathname === '/login' ? "Loading Authentication..." : "Loading Account Creation..."} />}
+            {isLoadingPage && <NeuroVicharLoadingLogo text={getLoadingText()} />}
             <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/20 dark:from-background dark:to-muted/10 p-4">
                 <AnimatePresence mode="wait">
                     <motion.div
@@ -125,7 +132,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {isLoadingPage && <NeuroVicharLoadingLogo />}
+          {isLoadingPage && <NeuroVicharLoadingLogo text={getLoadingText()} />}
           <SidebarProvider defaultOpen>
             <Sidebar>
               <SidebarHeader className="p-4">
@@ -156,10 +163,10 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Neural Interface" size="lg">
-                      <Link href="/neural-interface">
-                         <BrainCircuit /> 
-                        <span>Neural Interface</span>
+                    <SidebarMenuButton asChild tooltip="NeuroShastra: Zero-Input AI" size="lg">
+                      <Link href="/neuroshastra">
+                         <Eye /> 
+                        <span>NeuroShastra</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -287,3 +294,4 @@ export default function RootLayout({
     </html>
   );
 }
+

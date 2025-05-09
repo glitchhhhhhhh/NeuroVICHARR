@@ -1,6 +1,7 @@
+
 'use server';
 /**
- * @fileOverview AI flow for interpreting user intent via a neural interface.
+ * @fileOverview AI flow for interpreting user intent via NeuroShastra.
  * It takes a natural language query (which can be a placeholder like "Infer my intent") 
  * and rich user context (simulating telemetry) to infer a core goal and generate 
  * a "soft prompt" for another AI system like Neuro Synapse.
@@ -50,7 +51,6 @@ const InterpretUserIntentOutputSchema = z.object({
   suggestedActionDetail: z.string().optional().describe('Details for the action, e.g., parameters for a specific flow, a URL for NAVIGATE, or a clarifying question.'),
   confidence: z.number().min(0).max(1).describe('A score (0-1) indicating the AI\'s confidence in its inferred intent and generated soft prompt.'),
   explanation: z.string().describe('A detailed explanation of HOW the AI arrived at this inference, specifically citing which elements of the userContext (telemetry) were most influential.'),
-  // refinedPrompt is renamed to softPromptForSynapse for clarity in this context
 });
 export type InterpretUserIntentOutput = z.infer<typeof InterpretUserIntentOutputSchema>;
 
@@ -63,7 +63,7 @@ const prompt = ai.definePrompt({
   name: 'interpretUserIntentPrompt',
   input: {schema: InterpretUserIntentInputSchema},
   output: {schema: InterpretUserIntentOutputSchema},
-  prompt: `You are an exceptionally perceptive AI assistant powering the Neural Interface for "NeuroVichar".
+  prompt: `You are an exceptionally perceptive AI assistant powering NeuroShastra for "NeuroVichar".
 Your primary role is to INFER a user's most likely INTENT and generate a "SOFT PROMPT" for the NeuroSynapse engine, based ALMOST ENTIRELY on the provided 'userContext' (simulated behavioral telemetry and environmental data). The 'userQuery' might be a generic placeholder like "What should I do?" or "Infer my intent", in which case the 'userContext' is paramount.
 
 CRITICALLY ANALYZE THE userContext:
@@ -115,6 +115,7 @@ User's Explicit Query (may be generic):
 
 Application Features (for context on where to direct or what tasks are possible):
 - / (Dashboard): Overview.
+- /neuroshastra: The sacred science of thought-to-task AI—decoding digital behavior for zero-input intent resolution.
 - /neuro-synapse: Complex problem decomposition and synthesis. This is a primary target for complex inferred intents.
 - /ai-image-generation: Generates images.
 - /idea-catalyst: Helps brainstorm complex prompts.
@@ -160,18 +161,15 @@ const interpretUserIntentFlow = ai.defineFlow(
     const llmResponse = await prompt(input);
 
     if (!llmResponse.output) {
-      throw new Error('Neural Interface failed to generate an interpretation.');
+      throw new Error('NeuroShastra failed to generate an interpretation.');
     }
     
-    // Ensure the output fields match the schema, especially renaming for clarity
-    // The LLM is expected to produce `inferredIntent` and `softPromptForSynapse` as per the prompt.
-    // The `refinedPrompt` from the original schema is now effectively `softPromptForSynapse`.
     const output = llmResponse.output;
 
     return {
       originalQuery: input.userQuery,
       inferredIntent: output.inferredIntent,
-      softPromptForSynapse: output.softPromptForSynapse, // This is the key field for the soft prompt
+      softPromptForSynapse: output.softPromptForSynapse, 
       suggestedActionType: output.suggestedActionType,
       suggestedActionDetail: output.suggestedActionDetail,
       confidence: output.confidence,
@@ -179,3 +177,4 @@ const interpretUserIntentFlow = ai.defineFlow(
     };
   }
 );
+

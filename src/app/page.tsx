@@ -1,9 +1,9 @@
 
 'use client';
-import React from 'react'; // Added React import
+import React from 'react'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"; 
-import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store, Sparkles, Rocket, BrainCircuit } from "lucide-react";
+import { Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, Store, Sparkles, Rocket, Eye } from "lucide-react"; // Added Eye for NeuroShastra
 import Link from "next/link";
 import { motion } from 'framer-motion';
 
@@ -14,6 +14,13 @@ const aiFeatures = [
     icon: <Lightbulb className="w-8 h-8 text-accent" />,
     href: "/idea-catalyst",
     tag: "Pre-computation AI"
+  },
+  {
+    title: "NeuroShastra",
+    description: "NeuroShastra is the sacred science of thought-to-task AI—decoding your digital behavior, learning your intent, and delivering solutions without you ever lifting a finger.",
+    icon: <Eye className="w-8 h-8 text-accent" />, // Using Eye icon for NeuroShastra
+    href: "/neuroshastra",
+    tag: "Zero-Input AI"
   },
   {
     title: "Neuro Synapse",
@@ -28,13 +35,6 @@ const aiFeatures = [
     icon: <ImageIconLucide className="w-8 h-8 text-accent" />,
     href: "/ai-image-generation",
     tag: "Creative Suite"
-  },
-  {
-    title: "Neural Interface",
-    description: "Intuitive LLM-powered prompt submission & context awareness.",
-    icon: <BrainCircuit className="w-8 h-8 text-accent" />,
-    href: "/neural-interface",
-    tag: "Interaction AI"
   },
   {
     title: "Live Web Browsing Agents",
@@ -96,10 +96,10 @@ const cardVariants = {
     },
   }),
   hover: {
-    scale: 1.05, // Slightly increased scale
-    boxShadow: "0px 25px 50px -12px hsla(var(--accent) / 0.25)", // More prominent accent shadow
-    borderColor: "hsla(var(--accent) / 0.7)", // Brighter accent border
-    transition: { duration: 0.2, ease: "circOut" }
+    scale: 1.03, 
+    boxShadow: "0px 20px 40px -10px hsla(var(--accent) / 0.20)", 
+    borderColor: "hsla(var(--accent) / 0.6)", 
+    transition: { duration: 0.25, ease: "circOut" }
   }
 };
 
@@ -152,7 +152,7 @@ const AnimatedSectionTitle: React.FC<{ children: React.ReactNode, className?: st
     <motion.div
       className="absolute bottom-[-8px] left-1/2 -translate-x-1/2 h-1 w-24 bg-gradient-to-r from-primary via-accent to-pink-500 rounded-full"
       initial={{ width: 0, opacity: 0 }}
-      animate={{ width: '6rem', opacity: 1 }} // 96px
+      animate={{ width: '6rem', opacity: 1 }} 
       transition={{ delay: delay + 0.3, duration: 0.7, ease: "circOut" }}
     />
   </motion.h2>
@@ -169,16 +169,14 @@ export default function DashboardPage() {
     visible: (i: number) => ({
       opacity: 1,
       transition: {
-        delay: i * 0.06, // Slightly faster stagger
-        duration: 0.4,
+        delay: i * 0.05, 
+        duration: 0.3,
       },
     }),
   };
 
   return (
     <div className="space-y-16 md:space-y-24 relative overflow-hidden">
-      {/* The global animated background pattern is now in layout.tsx via globals.css */}
-
       <motion.header 
         className="text-center pt-8 pb-12 md:pt-12 md:pb-16"
         initial="hidden"
@@ -199,10 +197,10 @@ export default function DashboardPage() {
           ))}
            <motion.span 
               className="bg-gradient-to-r from-primary via-accent to-pink-500 text-transparent bg-clip-text animate-gradient-x ml-1"
-              style={{backgroundSize: '200% 200%'}} // Ensure this is defined in globals.css for the animation
+              style={{backgroundSize: '200% 200%'}} 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: heroTitlePrefix.length * 0.06, duration: 0.5}}
+              transition={{ delay: heroTitlePrefix.length * 0.05, duration: 0.5}}
             >
               {heroTitleMain.split("").map((char, i) => (
                 <motion.span key={`main-${i}`} variants={titleVariants} custom={heroTitlePrefix.length + i} className="inline-block">
@@ -214,14 +212,14 @@ export default function DashboardPage() {
               className="text-foreground"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.06 + 0.2, duration: 0.5}}
+              transition={{ delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.05 + 0.2, duration: 0.5}}
             >!</motion.span>
         </motion.h1>
         <motion.p 
           className="text-xl text-muted-foreground mt-5 sm:text-2xl max-w-3xl mx-auto leading-relaxed"
            variants={{
             hidden: { opacity: 0, y: 20 },
-            visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.06 + 0.3, ease: "easeOut" } }
+            visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: (heroTitlePrefix.length + heroTitleMain.length) * 0.05 + 0.3, ease: "easeOut" } }
           }}
         >
           {heroSubtitle}
@@ -296,7 +294,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </motion.section>
-      {/* The style jsx for animate-gradient-x is now in globals.css */}
     </div>
   );
 }
+

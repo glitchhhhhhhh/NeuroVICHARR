@@ -5,7 +5,7 @@ import { useState, type FormEvent, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BrainCircuit, ChevronRight, Loader2, AlertCircle, Wand2, Info, HelpCircle, Search, LinkIcon, FileText, Settings2, Copy, Check, UserCircle, Activity, MessageSquare, Sparkles, Zap, Eye, Brain, ShieldAlert } from "lucide-react";
+import { BrainCircuit, ChevronRight, Loader2, AlertCircle, Wand2, Info, HelpCircle, Search, LinkIcon, FileText, Settings2, Copy, Check, UserCircle, Activity, MessageSquare, Sparkles, Zap, Eye, Brain, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { interpretUserIntent, type InterpretUserIntentOutput, type UserContext } from '@/ai/flows/interpret-user-intent-flow';
 import { neuroSynapse, type NeuroSynapseOutput, type NeuroSynapseInput } from '@/ai/flows/neuro-synapse-flow';
@@ -90,7 +90,7 @@ const predefinedContexts: Record<string, { label: string; icon: React.ReactNode;
 };
 
 
-export default function NeuralInterfacePage() {
+export default function NeuroShastraPage() {
   const [isLoadingIntent, setIsLoadingIntent] = useState(false);
   const [isLoadingSynapse, setIsLoadingSynapse] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +110,7 @@ export default function NeuralInterfacePage() {
       setPermissionStatus('allowed');
     } else if (storedPermission === 'denied') {
       setPermissionStatus('denied');
+      setShowPermissionModal(true); // Show modal if denied previously to re-prompt or inform
     } else {
       setPermissionStatus('unknown');
       setShowPermissionModal(true);
@@ -122,7 +123,7 @@ export default function NeuralInterfacePage() {
     setShowPermissionModal(false);
     toast({
       title: "Permissions Granted",
-      description: "Neural Interface will now use contextual data for enhanced suggestions.",
+      description: "NeuroShastra will now use contextual data for enhanced suggestions.",
       className: "bg-green-500 text-white border-green-600"
     });
   };
@@ -133,7 +134,7 @@ export default function NeuralInterfacePage() {
     setShowPermissionModal(false);
      toast({
       title: "Permissions Denied",
-      description: "Neural Interface will operate with limited contextual understanding.",
+      description: "NeuroShastra will operate with limited contextual understanding.",
       variant: "destructive"
     });
   };
@@ -147,13 +148,14 @@ export default function NeuralInterfacePage() {
     setSynapseResult(null); 
   }, []);
   
-  const handleNeuroVicharActivation = async () => {
+  const handleNeuroShastraActivation = async () => {
     if (permissionStatus !== 'allowed') {
       setShowPermissionModal(true);
       toast({
         title: "Permission Required",
-        description: "Please allow background activity tracking to use the full Neural Interface capabilities.",
-        variant: "default"
+        description: "Please allow background activity tracking to use the full NeuroShastra capabilities.",
+        variant: "default",
+        className:"bg-yellow-500/20 border-yellow-600 text-yellow-700 dark:text-yellow-300"
       });
       return;
     }
@@ -165,19 +167,19 @@ export default function NeuralInterfacePage() {
 
     try {
       const response = await interpretUserIntent({ 
-        userQuery: "Infer intent based on my current context.", 
+        userQuery: "Infer my intent based on my current context.", 
         userContext: permissionStatus === 'allowed' ? currentUserContext : { preferredTone: currentUserContext.preferredTone || "casual"} 
       });
       setIntentResult(response);
       toast({
         title: "Intent Inferred!",
-        description: "NeuroVichar has analyzed your context and suggested a course of action.",
+        description: "NeuroShastra has analyzed your context and suggested a course of action.",
         className: "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-600"
       });
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred while interpreting your intent.';
       setError(errorMessage);
-      console.error("Neural Interface (Intent) error:", e);
+      console.error("NeuroShastra (Intent) error:", e);
       toast({ title: "Intent Inference Error", description: errorMessage, variant: "destructive" });
     } finally {
       setIsLoadingIntent(false);
@@ -210,7 +212,7 @@ export default function NeuralInterfacePage() {
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred with Neuro Synapse.';
       setError(errorMessage);
-      console.error("Neural Interface (Synapse) error:", e);
+      console.error("NeuroShastra (Synapse) error:", e);
       toast({ title: "Neuro Synapse Error", description: errorMessage, variant: "destructive" });
     } finally {
       setIsLoadingSynapse(false);
@@ -240,9 +242,8 @@ export default function NeuralInterfacePage() {
         onAllow={handleAllowPermission}
         onDeny={handleDenyPermission}
         onClose={() => {
-          // If user closes without deciding and status is still unknown, consider it denied for this session
-          if (permissionStatus === 'unknown') {
-            handleDenyPermission(); // Or set to a temporary 'dismissed' state
+          if (permissionStatus === 'unknown') { // Only auto-deny if user explicitly closes without choice and it was initial prompt
+            handleDenyPermission(); 
           } else {
             setShowPermissionModal(false);
           }
@@ -264,7 +265,7 @@ export default function NeuralInterfacePage() {
             transition={{ duration:0.6, delay:0.3, ease:'easeOut' }}
             className="text-5xl md:text-7xl font-extrabold tracking-tight text-primary-foreground"
           >
-            Neural Interface
+            NeuroShastra
           </motion.h1>
           <motion.p 
             initial={{ opacity:0, y:20 }}
@@ -272,7 +273,7 @@ export default function NeuralInterfacePage() {
             transition={{ duration:0.6, delay:0.5, ease:'easeOut' }}
             className="text-xl md:text-2xl text-primary-foreground/90 mt-5 max-w-3xl mx-auto px-4"
           >
-            Tap into NeuroVichar's cognitive core. We analyze your digital context to anticipate your needs—no typing required.
+            NeuroShastra is the sacred science of thought-to-task AI—decoding your digital behavior, learning your intent, and delivering solutions without you ever lifting a finger.
           </motion.p>
         </div>
       </header>
@@ -288,7 +289,7 @@ export default function NeuralInterfacePage() {
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2.5 text-foreground/90"><UserCircle className="w-7 h-7 text-accent"/>Simulate Your Context</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                Choose a persona to simulate different background activities and preferences. NeuroVichar will use this to infer your intent.
+                Choose a persona to simulate different background activities and preferences. NeuroShastra will use this to infer your intent.
                  {permissionStatus === 'denied' && <span className="block text-yellow-600 dark:text-yellow-400 text-xs mt-1">Contextual features are limited due to denied permissions.</span>}
               </CardDescription>
             </CardHeader>
@@ -331,7 +332,7 @@ export default function NeuralInterfacePage() {
               >
                 <Brain className="w-16 h-16 text-accent mx-auto mb-3" />
               </motion.div>
-              <CardTitle className="text-3xl font-semibold text-foreground/95">Activate NeuroVichar</CardTitle>
+              <CardTitle className="text-3xl font-semibold text-foreground/95">Activate NeuroShastra</CardTitle>
               <CardDescription className="text-base text-muted-foreground mt-1.5">
                 Click below. We'll analyze your <strong className="text-accent">{predefinedContexts[selectedContextKey]?.label || "current"}</strong> context and predict your next move.
               </CardDescription>
@@ -342,14 +343,14 @@ export default function NeuralInterfacePage() {
                     <ShieldAlert className="h-5 w-5" />
                     <AlertTitle>Permissions Denied</AlertTitle>
                     <AlertDescription>
-                      The Neural Interface requires background activity tracking permissions to function optimally. 
-                      Please enable them in your settings or click "Allow" in the permission prompt if it reappears.
-                      <Button variant="link" onClick={() => setShowPermissionModal(true)} className="p-0 h-auto ml-1 text-destructive hover:underline">Re-show Permission Prompt</Button>
+                      NeuroShastra requires background activity tracking permissions to function optimally. 
+                      Please enable them in your settings or click 
+                      <Button variant="link" onClick={() => setShowPermissionModal(true)} className="p-0 h-auto ml-1 text-destructive hover:underline">here to re-show the permission prompt.</Button>
                     </AlertDescription>
                   </Alert>
                 )}
                 <Button 
-                  onClick={handleNeuroVicharActivation}
+                  onClick={handleNeuroShastraActivation}
                   disabled={isLoadingIntent || isLoadingSynapse || permissionStatus !== 'allowed'} 
                   size="lg" 
                   className="text-xl px-12 py-8 shadow-xl hover:shadow-accent/40 transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-br from-accent via-pink-500 to-purple-600 text-primary-foreground rounded-xl group"
@@ -362,7 +363,7 @@ export default function NeuralInterfacePage() {
                   ) : (
                     <>
                       <Zap className="mr-3 h-7 w-7 transition-transform group-hover:rotate-[15deg] group-hover:scale-110" />
-                      ENGAGE NEUROVICHAR
+                      ENGAGE NEUROSHASTRA
                     </>
                   )}
                 </Button>
@@ -370,7 +371,7 @@ export default function NeuralInterfacePage() {
                   <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
                     <Alert variant="destructive" className="shadow-lg border-red-500/50 text-left">
                       <AlertCircle className="h-5 w-5 text-red-500" />
-                      <AlertTitle className="font-semibold text-red-600 dark:text-red-400">Interface Error</AlertTitle>
+                      <AlertTitle className="font-semibold text-red-600 dark:text-red-400">NeuroShastra Error</AlertTitle>
                       <AlertDescription className="text-red-700 dark:text-red-300">{error}</AlertDescription>
                     </Alert>
                   </motion.div>
@@ -543,3 +544,4 @@ export default function NeuralInterfacePage() {
     </div>
   );
 }
+
