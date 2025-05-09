@@ -1,4 +1,4 @@
---
+
 'use client';
 
 import { useState, type FormEvent, useEffect, useCallback } from 'react';
@@ -543,5 +543,3 @@ export default function NeuralInterfacePage() {
     </div>
   );
 }
-
-    
