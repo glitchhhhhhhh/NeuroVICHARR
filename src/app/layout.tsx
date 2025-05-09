@@ -5,7 +5,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarFooter, SidebarGroupLabel } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
-import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn, BrainCircuit } from 'lucide-react';
+import { Home, Settings, Brain, Zap, Share2, SearchCode, Globe, Image as ImageIconLucide, DollarSign, Lightbulb, UserCircle, Store, LogIn, BrainCircuit, Sparkles, Rocket } from 'lucide-react';
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
@@ -46,19 +46,25 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname === '/signup'; 
-  const [isLoadingPage, setIsLoadingPage] = useState(false);
+  const [isLoadingPage, setIsLoadingPage] = useState(true); // Start with loading true
 
   useEffect(() => {
-    setIsLoadingPage(true);
-    const timer = setTimeout(() => {
-       // Fallback to hide loader if onAnimationComplete doesn't fire quickly enough
-       // or if a page doesn't have the motion.div expected for onAnimationComplete
-       if (isLoadingPage) setIsLoadingPage(false);
-    }, 1000); // Adjust timeout as needed
+    // If not an auth page, manage loading state for page transitions
+    if (!isAuthPage) {
+      setIsLoadingPage(true); // Set loading true when pathname changes (triggers on new page load)
+      const timer = setTimeout(() => {
+         // Fallback to hide loader if onAnimationComplete doesn't fire quickly enough
+         // or if a page doesn't have the motion.div expected for onAnimationComplete
+         if (isLoadingPage) setIsLoadingPage(false);
+      }, 2500); // Increased fallback timeout
 
-    return () => clearTimeout(timer);
+      return () => clearTimeout(timer);
+    } else {
+      // For auth pages, typically want them to appear quickly without this specific loader
+      setIsLoadingPage(false); 
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, isAuthPage]); // Rerun effect if pathname or isAuthPage status changes
 
 
   if (isAuthPage) {
@@ -75,16 +81,17 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            {/* Minimal loader for auth pages, or none if handled by their own AnimatePresence */}
             {isLoadingPage && <NeuroVicharLoadingLogo text="Loading Page..." />}
             <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/20 dark:from-background dark:to-muted/10 p-4">
                 <AnimatePresence mode="wait">
                     <motion.div
-                    key={pathname}
+                    key={pathname} // Ensure auth pages also animate distinctly
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    onAnimationComplete={() => setIsLoadingPage(false)}
+                    onAnimationComplete={() => {if(isAuthPage) setIsLoadingPage(false)}} // Ensure loader hides for auth page animations
                     className="w-full max-w-md" 
                     >
                     {children}
@@ -104,7 +111,7 @@ export default function RootLayout({
       <head>
         <title>{String(metadataObject.title)}</title>
         <meta name="description" content={String(metadataObject.description)} />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        {/* <link rel="icon" href="/favicon.ico" sizes="any" /> Favicon handled by Next.js file convention */}
       </head>
       <body className={`${inter.variable} font-sans antialiased animated-bg-pattern`}> 
         <ThemeProvider
@@ -119,16 +126,16 @@ export default function RootLayout({
               <SidebarHeader className="p-4">
                 <div className="flex items-center justify-between">
                   <Link href="/" className="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar-background rounded-md outline-none">
-                    <AppLogo className="w-8 h-8" />
-                    <h1 className="text-xl font-semibold">NeuroVichar</h1>
+                    <AppLogo className="w-10 h-10" /> {/* Slightly larger logo */}
+                    <h1 className="text-2xl font-semibold tracking-tight">NeuroVichar</h1>
                   </Link>
                   <SidebarTrigger className="hidden md:flex" />
                 </div>
               </SidebarHeader>
               <SidebarContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Dashboard">
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Dashboard" size="lg">
                       <Link href="/">
                         <Home />
                         <span>Dashboard</span>
@@ -136,7 +143,7 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                    <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Idea Catalyst">
+                    <SidebarMenuButton asChild tooltip="Idea Catalyst" size="lg">
                       <Link href="/idea-catalyst">
                         <Lightbulb />
                         <span>Idea Catalyst</span>
@@ -144,7 +151,7 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Neuro Synapse">
+                    <SidebarMenuButton asChild tooltip="Neuro Synapse" size="lg">
                       <Link href="/neuro-synapse">
                         <Brain />
                         <span>Neuro Synapse</span>
@@ -152,7 +159,7 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="AI Image Generation">
+                    <SidebarMenuButton asChild tooltip="AI Image Generation" size="lg">
                       <Link href="/ai-image-generation">
                         <ImageIconLucide />
                         <span>AI Image Generation</span>
@@ -160,7 +167,7 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Neural Interface">
+                    <SidebarMenuButton asChild tooltip="Neural Interface" size="lg">
                       <Link href="/neural-interface">
                          <BrainCircuit />
                         <span>Neural Interface</span>
@@ -168,7 +175,7 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Web Browsing Agents">
+                    <SidebarMenuButton asChild tooltip="Web Browsing Agents" size="lg">
                       <Link href="/web-browsing">
                         <Globe />
                         <span>Web Browsing Agents</span>
@@ -176,7 +183,7 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Plugin Marketplace">
+                    <SidebarMenuButton asChild tooltip="Plugin Marketplace" size="lg">
                       <Link href="/plugin-marketplace">
                         <Store />
                         <span>Plugin Marketplace</span>
@@ -184,17 +191,18 @@ export default function RootLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                    <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Revenue Model">
+                    <SidebarMenuButton asChild tooltip="Revenue Model" size="lg">
                       <Link href="/revenue-model">
                         <DollarSign />
                         <span>Revenue Model</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  
                   <SidebarMenu className="mt-auto pt-4 border-t border-sidebar-border/50"> 
                     <SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2 pt-2">Platform Features</SidebarGroupLabel>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip="Parallel Processing">
+                      <SidebarMenuButton asChild tooltip="Parallel Processing" size="lg">
                         <Link href="/parallel-processing">
                           <Zap />
                           <span>Parallel Processing</span>
@@ -202,7 +210,7 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip="Distributed Power">
+                      <SidebarMenuButton asChild tooltip="Distributed Power" size="lg">
                         <Link href="/distributed-power">
                           <Share2 />
                           <span>Distributed Power</span>
@@ -210,16 +218,17 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip="Sub-Prompt Decomposition">
+                      <SidebarMenuButton asChild tooltip="Sub-Prompt Decomposition" size="lg">
                         <Link href="/sub-prompt-decomposition">
                           <SearchCode />
                           <span>Sub-Prompt Decomposition</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+
                      <SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2 pt-4">User Account</SidebarGroupLabel>
                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild tooltip="Profile">
+                        <SidebarMenuButton asChild tooltip="Profile" size="lg">
                         <Link href="/profile">
                             <UserCircle />
                             <span>Profile</span>
@@ -227,7 +236,7 @@ export default function RootLayout({
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                        <SidebarMenuButton asChild tooltip="Login">
+                        <SidebarMenuButton asChild tooltip="Login" size="lg">
                         <Link href="/login">
                             <LogIn />
                             <span>Login</span>
@@ -265,3 +274,4 @@ export default function RootLayout({
     </html>
   );
 }
+
