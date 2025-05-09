@@ -1,5 +1,6 @@
-'use client';
 
+'use client';
+import * as React from 'react'; // Added React import
 import { type NeuroSynapseOutput, type SubTask as PageSubTask, type ToolUsage as PageToolUsage, type EthicalCompliance as PageEthicalCompliance } from '@/ai/flows/neuro-synapse-flow';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from '@/components/ui/separator';
@@ -105,7 +106,7 @@ const WorkflowDiagramEdge: React.FC<{
 };
 
 const WorkflowDiagram: React.FC<{ data: NeuroSynapseOutput['workflowDiagramData'] | undefined, activeNodeIds?: string[] }> = ({ data, activeNodeIds = [] }) => {
-    const nodePositions = React.useMemo(() => { // Ensure React is imported
+    const nodePositions = React.useMemo(() => { 
       if (!data || !data.nodes || !data.nodes.length) return {};
       const positions: { [key: string]: { x: number; y: number } } = {};
       const nodeWidth = 160;
